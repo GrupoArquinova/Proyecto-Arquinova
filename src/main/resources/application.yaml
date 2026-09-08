@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: constructora-backend
+  datasource:
+    url: jdbc:mysql://localhost:3306/constructora_web
+    username: root
+    password: JUAN1003
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
