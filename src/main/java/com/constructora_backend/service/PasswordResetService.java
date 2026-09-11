@@ -4,6 +4,8 @@ import com.constructora_backend.dto.request.ForgotPasswordRequest;
 import com.constructora_backend.dto.request.ResetPasswordRequest;
 import com.constructora_backend.entity.TokenRecuperacion;
 import com.constructora_backend.entity.Usuario;
+import com.constructora_backend.exception.BadRequestException;
+import com.constructora_backend.exception.ResourceNotFoundException;
 import com.constructora_backend.repository.TokenRecuperacionRepository;
 import com.constructora_backend.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +28,7 @@ public class PasswordResetService {
     @Transactional
     public void solicitarRecuperacion(ForgotPasswordRequest request) {
         Usuario usuario = usuarioRepository.findByCorreo(request.getCorreo())
-                .orElseThrow(() -> new RuntimeException("No se encontro ningun usuario con ese correo"));
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró ningún usuario registrado con el correo: " + request.getCorreo()));
 
         String token = UUID.randomUUID().toString();
 
@@ -44,14 +46,14 @@ public class PasswordResetService {
     @Transactional
     public void restablecerPassword(ResetPasswordRequest request) {
         TokenRecuperacion tokenEntity = tokenRepository.findByTokenHash(request.getToken())
-                .orElseThrow(() -> new RuntimeException("Token invalido o inxistente"));
+                .orElseThrow(() -> new ResourceNotFoundException("El token de recuperación proporcionado es inválido o no existe"));
 
         if (tokenEntity.getUsadoEn() != null) {
-            throw new RuntimeException("Este token ya ha sido utilizado");
+            throw new BadRequestException("Este token ya ha sido utilizado previamente");
         }
 
         if (tokenEntity.getExpiraEn().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("El token ha expirado");
+            throw new BadRequestException("El token de recuperación ha expirado");
         }
 
         Usuario usuario = tokenEntity.getUsuario();

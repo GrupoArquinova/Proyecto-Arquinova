@@ -1,27 +1,30 @@
 package com.constructora_backend.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
+import lombok.Data;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "roles")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
-public class Rol {
+@Table(name = "etapas")
+@Data
+public class Etapa {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "proyecto_id", nullable = false)
+    private Proyecto proyecto;
+
+    @Column(nullable = false, length = 100)
     private String nombre;
 
+    @Column(columnDefinition = "TEXT")
     private String descripcion;
+
+    @Column(columnDefinition = "SMALLINT", nullable = false)
+    private Short orden = 1;
 
     @Column(nullable = false)
     private Boolean activo = true;

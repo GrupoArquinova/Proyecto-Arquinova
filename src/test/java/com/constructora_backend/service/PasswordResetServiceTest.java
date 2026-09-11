@@ -4,6 +4,8 @@ import com.constructora_backend.dto.request.ForgotPasswordRequest;
 import com.constructora_backend.dto.request.ResetPasswordRequest;
 import com.constructora_backend.entity.TokenRecuperacion;
 import com.constructora_backend.entity.Usuario;
+import com.constructora_backend.exception.BadRequestException;
+import com.constructora_backend.exception.ResourceNotFoundException;
 import com.constructora_backend.repository.TokenRecuperacionRepository;
 import com.constructora_backend.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,18 +78,18 @@ class PasswordResetServiceTest {
     }
 
     @Test
-    @DisplayName("solicitarRecuperacion - Debe lanzar excepcion cuando el usuario no existe")
+    @DisplayName("solicitarRecuperacion - Debe lanzar ResourceNotFoundException cuando el usuario no existe")
     void solicitarRecuperacion_UsuarioNoEncontrado() {
         ForgotPasswordRequest request = new ForgotPasswordRequest();
         request.setCorreo("inexistente@constructora.com");
 
         when(usuarioRepository.findByCorreo("inexistente@constructora.com")).thenReturn(Optional.empty());
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () ->
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () ->
                 passwordResetService.solicitarRecuperacion(request)
         );
 
-        assertTrue(exception.getMessage().contains("No se encontro ningun usuario"));
+        assertTrue(exception.getMessage().contains("No se encontró ningún usuario"));
         verify(tokenRepository, never()).save(any());
         verify(emailService, never()).enviarCorreoRecuperacion(anyString(), anyString());
     }
@@ -119,7 +121,7 @@ class PasswordResetServiceTest {
     }
 
     @Test
-    @DisplayName("restablecerPassword - Debe lanzar excepcion si el token no existe")
+    @DisplayName("restablecerPassword - Debe lanzar ResourceNotFoundException si el token no existe")
     void restablecerPassword_TokenInexistente() {
         ResetPasswordRequest request = new ResetPasswordRequest();
         request.setToken("token-fantasma");
@@ -127,16 +129,16 @@ class PasswordResetServiceTest {
 
         when(tokenRepository.findByTokenHash("token-fantasma")).thenReturn(Optional.empty());
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () ->
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () ->
                 passwordResetService.restablecerPassword(request)
         );
 
-        assertTrue(exception.getMessage().contains("Token invalido"));
+        assertTrue(exception.getMessage().contains("inválido o no existe"));
         verify(usuarioRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("restablecerPassword - Debe lanzar excepcion si el token ya fue usado")
+    @DisplayName("restablecerPassword - Debe lanzar BadRequestException si el token ya fue usado")
     void restablecerPassword_TokenYaUsado() {
         ResetPasswordRequest request = new ResetPasswordRequest();
         request.setToken("token-usado");
@@ -152,7 +154,7 @@ class PasswordResetServiceTest {
 
         when(tokenRepository.findByTokenHash("token-usado")).thenReturn(Optional.of(tokenEntity));
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () ->
+        BadRequestException exception = assertThrows(BadRequestException.class, () ->
                 passwordResetService.restablecerPassword(request)
         );
 
@@ -161,7 +163,7 @@ class PasswordResetServiceTest {
     }
 
     @Test
-    @DisplayName("restablecerPassword - Debe lanzar excepcion si el token esta expirado")
+    @DisplayName("restablecerPassword - Debe lanzar BadRequestException si el token esta expirado")
     void restablecerPassword_TokenExpirado() {
         ResetPasswordRequest request = new ResetPasswordRequest();
         request.setToken("token-expirado");
@@ -177,7 +179,7 @@ class PasswordResetServiceTest {
 
         when(tokenRepository.findByTokenHash("token-expirado")).thenReturn(Optional.of(tokenEntity));
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () ->
+        BadRequestException exception = assertThrows(BadRequestException.class, () ->
                 passwordResetService.restablecerPassword(request)
         );
 
