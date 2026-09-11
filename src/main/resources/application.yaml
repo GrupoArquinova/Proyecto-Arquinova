@@ -3,7 +3,7 @@ spring:
     name: constructora-backend
 
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:constructora_web}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:constructora_web}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Bogota
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:JUAN1003}
 

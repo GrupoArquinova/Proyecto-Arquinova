@@ -36,4 +36,10 @@ public class Usuario {
 
     @Column(name = "ultimo_acceso_en")
     private LocalDateTime ultimoAccesoEn;
+
+    @Column(name = "creado_en", nullable = false, insertable = false, updatable = false)
+    private LocalDateTime creadoEn;
+
+    @Column(name = "actualizado_en", insertable = false, updatable = false)
+    private LocalDateTime actualizadoEn;
 }
