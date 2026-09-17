@@ -4,6 +4,8 @@ import com.constructora_backend.dto.request.UbicacionRequestDTO;
 import com.constructora_backend.dto.response.UbicacionResponseDTO;
 import com.constructora_backend.entity.Proyecto;
 import com.constructora_backend.entity.Ubicacion;
+import com.constructora_backend.exception.DuplicateResourceException;
+import com.constructora_backend.exception.ResourceNotFoundException;
 import com.constructora_backend.mapper.UbicacionMapper;
 import com.constructora_backend.repository.ProyectoRepository;
 import com.constructora_backend.repository.UbicacionRepository;
@@ -87,8 +89,18 @@ class UbicacionServiceTest {
     void guardarUbicacionConProyectoYaExistenteLanzaExcepcion() {
         when(ubicacionRepository.existsByProyectoId(1L)).thenReturn(true);
 
-        RuntimeException excepcion = assertThrows(RuntimeException.class, () -> ubicacionService.guardar(requestDTO));
+        DuplicateResourceException excepcion = assertThrows(DuplicateResourceException.class, () -> ubicacionService.guardar(requestDTO));
         assertTrue(excepcion.getMessage().contains("ya tiene una ubicación registrada"));
         verify(ubicacionRepository, never()).save(any());
     }
-}
+
+    @Test
+    void guardarUbicacionConProyectoNoExistenteLanzaExcepcion() {
+        when(ubicacionRepository.existsByProyectoId(1L)).thenReturn(false);
+        when(proyectoRepository.findById(1L)).thenReturn(Optional.empty());
+
+        ResourceNotFoundException excepcion = assertThrows(ResourceNotFoundException.class, () -> ubicacionService.guardar(requestDTO));
+        assertTrue(excepcion.getMessage().contains("Proyecto no encontrado"));
+        verify(ubicacionRepository, never()).save(any());
+    }
+}

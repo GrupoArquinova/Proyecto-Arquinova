@@ -50,6 +50,7 @@ public class Empresa {
     private String logoUrl;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean activo = true;
 
     @Column(name = "creado_en", nullable = false, insertable = false, updatable = false)

@@ -50,9 +50,9 @@ class CasaModeloServiceTest {
         requestDTO.setProyectoId(1L);
         requestDTO.setNombre("Modelo Roble");
         requestDTO.setDescripcion("Casa de 2 pisos con jardín");
-        requestDTO.setAreaContruidaM2(new BigDecimal("120.50"));
-        requestDTO.setNumeroHabitaciones(3);
-        requestDTO.setNumeroBanos(2);
+        requestDTO.setAreaConstruidaM2(new BigDecimal("120.50"));
+        requestDTO.setNumeroHabitaciones((byte) 3);
+        requestDTO.setNumeroBanos((byte) 2);
 
         casaModelo = new CasaModelo();
         casaModelo.setId(5L);

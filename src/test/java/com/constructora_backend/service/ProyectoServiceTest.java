@@ -86,6 +86,7 @@ class ProyectoServiceTest {
 
     @Test
     void guardarProyectoConSlugDuplicadoLanzaExcepcion() {
+        when(empresaRepository.findById(1L)).thenReturn(Optional.of(empresa));
         when(proyectoRepository.existsByEmpresaIdAndSlug(1L, "residencial-el-bosque")).thenReturn(true);
 
         RuntimeException excepcion = assertThrows(RuntimeException.class, () -> proyectoService.guardar(requestDTO));

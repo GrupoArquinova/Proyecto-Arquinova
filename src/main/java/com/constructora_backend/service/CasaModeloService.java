@@ -55,7 +55,7 @@ public class CasaModeloService {
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado con ID: " + dto.getProyectoId()));
 
         if (casaModeloRepository.existsByProyectoIdAndNombre(dto.getProyectoId(), dto.getNombre())) {
-            throw new IllegalArgumentException("ya existe una casa modelo con el nombre '" + dto.getNombre() + "' en este proytecto.");
+            throw new IllegalArgumentException("Ya existe una casa modelo con el nombre '" + dto.getNombre() + "' en este proyecto.");
         }
 
         CasaModelo casa = casaModeloMapper.toEntity(dto, proyecto);
@@ -66,10 +66,10 @@ public class CasaModeloService {
     @Transactional
     public CasaModeloResponseDTO actualizar(Long id, CasaModeloRequestDTO dto) {
         CasaModelo existente = casaModeloRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("casa modelo no encontrado con ID: " +id));
+                .orElseThrow(() -> new RuntimeException("Casa modelo no encontrada con ID: " + id));
 
         Proyecto proyecto = proyectoRepository.findById(dto.getProyectoId())
-                .orElseThrow(() -> new RuntimeException("Casa modelo no encontradacon ID:" + dto.getProyectoId()));
+                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado con ID: " + dto.getProyectoId()));
 
         if (casaModeloRepository.existsByProyectoIdAndNombreAndIdNot(dto.getProyectoId(), dto.getNombre(), id)) {
             throw new IllegalArgumentException("Ya existe otra casa modelo con el nombre '" + dto.getNombre() + "' en este proyecto.");
@@ -83,7 +83,7 @@ public class CasaModeloService {
     @Transactional
     public void eliminar(Long id) {
         if (!casaModeloRepository.existsById(id)) {
-            throw new RuntimeException("casa modelo no encontrado con ID: " + id);
+            throw new RuntimeException("Casa modelo no encontrada con ID: " + id);
         }
 
         casaModeloRepository.deleteById(id);

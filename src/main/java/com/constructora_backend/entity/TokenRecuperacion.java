@@ -2,6 +2,8 @@ package com.constructora_backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -21,6 +23,7 @@ public class TokenRecuperacion {
     private Usuario usuario;
 
     @Column(name = "token_hash", nullable = false, unique = true, length = 64)
+    @JdbcTypeCode(SqlTypes.CHAR)
     private String tokenHash;
 
     @Column(name = "expira_en", nullable = false)

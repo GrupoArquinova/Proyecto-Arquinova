@@ -55,7 +55,7 @@ public class ZonaComunService {
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado con ID: " + dto.getProyectoId()));
 
         if (zonaComunRepository.existsByProyectoIdAndNombre(dto.getProyectoId(), dto.getNombre())) {
-            throw new IllegalArgumentException("Ya existe una zona comun con el nombre '" + dto.getNombre() + "' en este proyecto");
+            throw new IllegalArgumentException("Ya existe una zona común con el nombre '" + dto.getNombre() + "' en este proyecto.");
         }
 
         ZonaComun zona = zonaComunMapper.toEntity(dto, proyecto);
@@ -66,13 +66,13 @@ public class ZonaComunService {
     @Transactional
     public ZonaComunResponseDTO actualizar(Long id, ZonaComunRequestDTO dto) {
         ZonaComun existente = zonaComunRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Zona comun no encontrada con ID: " + id));
+                .orElseThrow(() -> new RuntimeException("Zona común no encontrada con ID: " + id));
 
         Proyecto proyecto = proyectoRepository.findById(dto.getProyectoId())
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado con ID: " + dto.getProyectoId()));
 
         if (zonaComunRepository.existsByProyectoIdAndNombreAndIdNot(dto.getProyectoId(), dto.getNombre(), id)) {
-            throw new IllegalArgumentException("Ya existe otra zona comun con el nombre '" + dto.getNombre() + "' en este proyecto.");
+            throw new IllegalArgumentException("Ya existe otra zona común con el nombre '" + dto.getNombre() + "' en este proyecto.");
         }
 
         zonaComunMapper.updateEntityFromDTO(dto, existente, proyecto);
@@ -83,7 +83,7 @@ public class ZonaComunService {
     @Transactional
     public void eliminar(Long id) {
         if (!zonaComunRepository.existsById(id)) {
-            throw new RuntimeException("Zona comun no encontrada con ID: " + id);
+            throw new RuntimeException("Zona común no encontrada con ID: " + id);
         }
         zonaComunRepository.deleteById(id);
     }
