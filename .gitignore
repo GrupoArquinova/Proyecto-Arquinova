@@ -35,3 +35,8 @@ build/
 ### Environment Variables ###
 .env
 
+# Antigravity / Logs y Temporales
+*.log
+*.sql
+*.dump
+.agent/scratch/

@@ -41,7 +41,7 @@ public class CasaModeloMapper {
         casa.setProyecto(proyecto);
         casa.setNombre(dto.getNombre());
         casa.setDescripcion(dto.getDescripcion());
-        casa.setAreaConstruidaM2(dto.getAreaContruidaM2());
+        casa.setAreaConstruidaM2(dto.getAreaConstruidaM2());
         casa.setNumeroHabitaciones(dto.getNumeroHabitaciones());
         casa.setNumeroBanos(dto.getNumeroBanos());
         casa.setTourVirtualUrl(dto.getTourVirtualUrl());
@@ -59,7 +59,7 @@ public class CasaModeloMapper {
         casa.setProyecto(proyecto);
         casa.setNombre(dto.getNombre());
         casa.setDescripcion(dto.getDescripcion());
-        casa.setAreaConstruidaM2(dto.getAreaContruidaM2());
+        casa.setAreaConstruidaM2(dto.getAreaConstruidaM2());
         casa.setNumeroHabitaciones(dto.getNumeroHabitaciones());
         casa.setNumeroBanos(dto.getNumeroBanos());
         casa.setTourVirtualUrl(dto.getTourVirtualUrl());

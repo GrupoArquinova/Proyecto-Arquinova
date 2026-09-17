@@ -4,10 +4,11 @@ import com.constructora_backend.dto.request.UbicacionRequestDTO;
 import com.constructora_backend.dto.response.UbicacionResponseDTO;
 import com.constructora_backend.entity.Proyecto;
 import com.constructora_backend.entity.Ubicacion;
+import com.constructora_backend.exception.DuplicateResourceException;
+import com.constructora_backend.exception.ResourceNotFoundException;
 import com.constructora_backend.mapper.UbicacionMapper;
 import com.constructora_backend.repository.ProyectoRepository;
 import com.constructora_backend.repository.UbicacionRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,14 +19,15 @@ import java.util.stream.Collectors;
 @Service
 public class UbicacionService {
 
-    @Autowired
-    private UbicacionRepository ubicacionRepository;
+    private final UbicacionRepository ubicacionRepository;
+    private final ProyectoRepository proyectoRepository;
+    private final UbicacionMapper ubicacionMapper;
 
-    @Autowired
-    private ProyectoRepository proyectoRepository;
-
-    @Autowired
-    private UbicacionMapper ubicacionMapper;
+    public UbicacionService(UbicacionRepository ubicacionRepository, ProyectoRepository proyectoRepository, UbicacionMapper ubicacionMapper) {
+        this.ubicacionRepository = ubicacionRepository;
+        this.proyectoRepository = proyectoRepository;
+        this.ubicacionMapper = ubicacionMapper;
+    }
 
     public List<UbicacionResponseDTO> listarTodas() {
         return ubicacionRepository.findAll()
@@ -54,11 +56,11 @@ public class UbicacionService {
     @Transactional
     public UbicacionResponseDTO guardar(UbicacionRequestDTO dto) {
         if (ubicacionRepository.existsByProyectoId(dto.getProyectoId())) {
-            throw new RuntimeException("El proyecto con ID " + dto.getProyectoId() + " ya tiene una ubicacion registrada.");
+            throw new DuplicateResourceException("El proyecto con ID " + dto.getProyectoId() + " ya tiene una ubicación registrada.");
         }
 
         Proyecto proyecto = proyectoRepository.findById(dto.getProyectoId())
-                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado con ID: " + dto.getProyectoId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + dto.getProyectoId()));
 
         Ubicacion ubicacion = ubicacionMapper.toEntity(dto, proyecto);
         Ubicacion guardada = ubicacionRepository.save(ubicacion);
@@ -68,15 +70,15 @@ public class UbicacionService {
     @Transactional
     public UbicacionResponseDTO actualizar(Long id, UbicacionRequestDTO dto) {
         Ubicacion existente = ubicacionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ubicacion no encontrada con ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Ubicación no encontrada con ID: " + id));
 
         if (!existente.getProyecto().getId().equals(dto.getProyectoId()) &&
         ubicacionRepository.existsByProyectoId(dto.getProyectoId())) {
-            throw new RuntimeException("El proyecto con ID " + dto.getProyectoId() + " ya tiene una ubicacion asignada.");
+            throw new DuplicateResourceException("El proyecto con ID " + dto.getProyectoId() + " ya tiene una ubicación asignada.");
         }
 
         Proyecto proyecto = proyectoRepository.findById(dto.getProyectoId())
-                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado con ID: " + dto.getProyectoId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + dto.getProyectoId()));
 
         ubicacionMapper.updateEntityFromDTO(dto, existente, proyecto);
         Ubicacion actualizada = ubicacionRepository.save(existente);
@@ -86,7 +88,7 @@ public class UbicacionService {
     @Transactional
     public void eliminar(Long id) {
         if (!ubicacionRepository.existsById(id)) {
-            throw new RuntimeException("Ubicacion no encontrado con ID: " + id);
+            throw new ResourceNotFoundException("Ubicación no encontrada con ID: " + id);
         }
         ubicacionRepository.deleteById(id);
     }

@@ -30,6 +30,7 @@ public class ContenidoInstitucional {
     private String contenido;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean publicado = true;
 
     @ManyToOne(fetch = FetchType.LAZY)

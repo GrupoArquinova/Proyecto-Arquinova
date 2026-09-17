@@ -42,7 +42,7 @@ public class ZonaComunImagenService {
     @Transactional
     public ZonaComunImagenResponseDTO guardar(ZonaComunImagenRequestDTO dto) {
         ZonaComun zonaComun = zonaComunRepository.findById(dto.getZonaComunId())
-                .orElseThrow(() -> new RuntimeException("Zona comun no encontrada con ID: " + dto.getZonaComunId()));
+                .orElseThrow(() -> new RuntimeException("Zona común no encontrada con ID: " + dto.getZonaComunId()));
 
         if (Boolean.TRUE.equals(dto.getEsPrincipal())) {
             imagenRepository.desmarcarPrincipalesDeZonaComun(dto.getZonaComunId());
@@ -56,10 +56,10 @@ public class ZonaComunImagenService {
     @Transactional
     public ZonaComunImagenResponseDTO actualizar(Long id, ZonaComunImagenRequestDTO dto) {
         ZonaComunImagen existente = imagenRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Imagen de zona comun no encontrada con ID: " + id));
+                .orElseThrow(() -> new RuntimeException("Imagen de zona común no encontrada con ID: " + id));
 
         ZonaComun zonaComun = zonaComunRepository.findById(dto.getZonaComunId())
-                .orElseThrow(() -> new RuntimeException("Zona comun no encontrada con ID: " + dto.getZonaComunId()));
+                .orElseThrow(() -> new RuntimeException("Zona común no encontrada con ID: " + dto.getZonaComunId()));
 
         if (Boolean.TRUE.equals(dto.getEsPrincipal())) {
             imagenRepository.desmarcarPrincipalesDeZonaComun(dto.getZonaComunId());
@@ -73,7 +73,7 @@ public class ZonaComunImagenService {
     @Transactional
     public void marcarComoPrincipal(Long id) {
         ZonaComunImagen existente = imagenRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Imagen de zona comun no encontrada con ID: " + id));
+                .orElseThrow(() -> new RuntimeException("Imagen de zona común no encontrada con ID: " + id));
 
         imagenRepository.desmarcarPrincipalesDeZonaComun(existente.getZonaComun().getId());
         existente.setEsPrincipal(true);
