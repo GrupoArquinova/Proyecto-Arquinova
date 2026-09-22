@@ -47,7 +47,7 @@ public class EstadoLoteService {
     @Transactional
     public EstadoLoteResponseDTO guardar(EstadoLoteRequestDTO dto) {
         if (estadoLoteRepository.existsByNombre(dto.getNombre())) {
-            throw new IllegalArgumentException("Ya existe un estado de lote con el nombre '" + dto.getNombre() + "'.");
+            throw new com.constructora_backend.exception.DuplicateResourceException("Ya existe un estado de lote con el nombre '" + dto.getNombre() + "'.");
         }
 
         EstadoLote estado = estadoLoteMapper.toEntity(dto);
@@ -58,10 +58,10 @@ public class EstadoLoteService {
     @Transactional
     public EstadoLoteResponseDTO actualizar(Integer id, EstadoLoteRequestDTO dto) {
         EstadoLote existente = estadoLoteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Estado de lote no encontrado con ID: " + id));
+                .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Estado de lote no encontrado con ID: " + id));
 
         if (estadoLoteRepository.existsByNombreAndIdNot(dto.getNombre(), id)) {
-            throw new IllegalArgumentException("Ya existe otro estado de lote con el nombre '" + dto.getNombre() + "'.");
+            throw new com.constructora_backend.exception.DuplicateResourceException("Ya existe otro estado de lote con el nombre '" + dto.getNombre() + "'.");
         }
 
         estadoLoteMapper.updateEntityFromDTO(dto, existente);
@@ -72,7 +72,7 @@ public class EstadoLoteService {
     @Transactional
     public void eliminar(Integer id) {
         if (!estadoLoteRepository.existsById(id)) {
-            throw new RuntimeException("Estado de lote no encontrado con ID: " + id);
+            throw new com.constructora_backend.exception.ResourceNotFoundException("Estado de lote no encontrado con ID: " + id);
         }
         estadoLoteRepository.deleteById(id);
     }

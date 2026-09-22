@@ -40,9 +40,16 @@ public class LoteServiceImpl {
             throw new IllegalArgumentException("El lote ya se encuentra en el estado: " + nuevoEstado.getNombre());
         }
 
-        Usuario usuario = (usuarioId != null)
-                ? usuarioRepository.findById(usuarioId).orElse(null)
-                : null;
+        Usuario usuario = null;
+        if (usuarioId != null) {
+            usuario = usuarioRepository.findById(usuarioId).orElse(null);
+        }
+        if (usuario == null) {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+                usuario = usuarioRepository.findByCorreo(auth.getName()).orElse(null);
+            }
+        }
 
         lote.setEstado(nuevoEstado);
         loteRepository.save(lote);
@@ -52,7 +59,7 @@ public class LoteServiceImpl {
                 .estadoAnterior(estadoAnterior)
                 .estadoNuevo(nuevoEstado)
                 .usuario(usuario)
-                .observaciones(dto.getObservacio())
+                .observaciones(dto.getObservaciones())
                 .build();
 
         historialEstadoLoteRepository.save(historial);

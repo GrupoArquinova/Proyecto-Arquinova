@@ -25,7 +25,7 @@ public class CasaModeloController {
 
     @GetMapping("/proyecto/{proyectoId}")
     @Operation(summary = "Listar por proyecto", description = "Obtiene todas las casas modelo de un proyecto")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<List<CasaModeloResponseDTO>> listarPorProyecto(@PathVariable Long proyectoId) {
         return ResponseEntity.ok(casaModeloService.listarPorProyectos(proyectoId));
     }
@@ -46,7 +46,7 @@ public class CasaModeloController {
 
     @PostMapping
     @Operation(summary = "Crear casa modelo", description = "Crea una nueva casa modelo")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "CREAR_CASA_MODELO", entidad = "CASAS_MODELO", descripcion = "Creación de casa modelo")
     public ResponseEntity<CasaModeloResponseDTO> crear(@Valid @RequestBody CasaModeloRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(casaModeloService.guardar(dto));
@@ -54,7 +54,7 @@ public class CasaModeloController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar casa modelo", description = "Actualiza los datos de una casa modelo")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "ACTUALIZAR_CASA_MODELO", entidad = "CASAS_MODELO", descripcion = "Actualización de casa modelo")
     public ResponseEntity<CasaModeloResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody CasaModeloRequestDTO dto) {
         return ResponseEntity.ok(casaModeloService.actualizar(id, dto));
@@ -62,7 +62,7 @@ public class CasaModeloController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar casa modelo", description = "Elimina permanentemente una casa modelo")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "ELIMINAR_CASA_MODELO", entidad = "CASAS_MODELO", descripcion = "Eliminación de casa modelo")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         casaModeloService.eliminar(id);

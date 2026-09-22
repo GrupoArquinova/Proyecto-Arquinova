@@ -86,7 +86,7 @@ public class AuthController {
                     .body(Map.of("error", "Credenciales incorrectas", "detalles", "El correo o la contraseña no coinciden"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error de autenticación", "mensaje", e.getMessage()));
+                    .body(Map.of("error", "Error de autenticación", "mensaje", "Ocurrió un error interno durante la autenticación. Intente más tarde."));
         }
     }
 }

@@ -50,7 +50,7 @@ public class EtapaController {
 
     @PostMapping
     @Operation(summary = "Crear etapa", description = "Crea una nueva etapa en un proyecto")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "CREAR_ETAPA", entidad = "ETAPAS", descripcion = "Creación de nueva etapa")
     public ResponseEntity<EtapaResponseDTO> crear(@Valid @RequestBody EtapaRequestDTO dto){
         return ResponseEntity.status(HttpStatus.CREATED).body(etapaService.guardar(dto));
@@ -58,7 +58,7 @@ public class EtapaController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar etapa", description = "Actualiza los datos de una etapa existente")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "ACTUALIZAR_ETAPA", entidad = "ETAPAS", descripcion = "Actualización de etapa")
     public ResponseEntity<EtapaResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody EtapaRequestDTO dto) {
         return ResponseEntity.ok(etapaService.actualizar(id, dto));
@@ -66,7 +66,7 @@ public class EtapaController {
 
     @PatchMapping("/{id}/desactivar")
     @Operation(summary = "Desactivar etapa", description = "Realiza un borrado lógico de una etapa")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "DESACTIVAR_ETAPA", entidad = "ETAPAS", descripcion = "Desactivación de etapa")
     public ResponseEntity<Void> desactivar(@PathVariable Long id) {
         etapaService.desactivar(id);
@@ -75,7 +75,7 @@ public class EtapaController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar etapa", description = "Elimina físicamente una etapa del sistema")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "ELIMINAR_ETAPA", entidad = "ETAPAS", descripcion = "Eliminación permanente de etapa")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         etapaService.eliminar(id);
