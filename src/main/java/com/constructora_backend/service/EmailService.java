@@ -21,6 +21,7 @@ public class EmailService {
         this.mailSender = mailSender;
     }
 
+    @org.springframework.scheduling.annotation.Async("taskExecutor")
     public void enviarCorreoRecuperacion(String destino, String token) {
         String enlace = "http://localhost:4200/reset-password?token=" + token;
 

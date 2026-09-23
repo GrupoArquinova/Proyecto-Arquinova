@@ -12,6 +12,8 @@ import com.constructora_backend.repository.EmpresaRepository;
 import com.constructora_backend.repository.ProyectoRepository;
 import com.constructora_backend.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -44,6 +46,7 @@ public class ProyectoService {
                 .collect(Collectors.toList());
     }
 
+    @Cacheable(value = "proyectos_publicos")
     public List<ProyectoResponseDTO> listarPublicados() {
         return proyectoRepository.findByPublicadoTrueAndActivoTrue()
                 .stream()
@@ -70,6 +73,7 @@ public class ProyectoService {
                 .map(proyectoMapper::toDTO);
     }
 
+    @CacheEvict(value = "proyectos_publicos", allEntries = true)
     public ProyectoResponseDTO guardar(ProyectoRequestDTO dto) {
         Empresa empresa = resolverEmpresa(dto.getEmpresaId());
 
@@ -86,6 +90,7 @@ public class ProyectoService {
         return proyectoMapper.toDTO(guardado);
     }
 
+    @CacheEvict(value = "proyectos_publicos", allEntries = true)
     public ProyectoResponseDTO actualizar(Long id, ProyectoRequestDTO dto) {
         Proyecto existente = proyectoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + id));
@@ -105,6 +110,7 @@ public class ProyectoService {
         return proyectoMapper.toDTO(actualizado);
     }
 
+    @CacheEvict(value = "proyectos_publicos", allEntries = true)
     public void desactivar(Long id) {
         Proyecto existente = proyectoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + id));

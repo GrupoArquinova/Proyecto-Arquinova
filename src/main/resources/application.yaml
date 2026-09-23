@@ -8,13 +8,13 @@ spring:
     password: ${DB_PASSWORD}
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
-        format_sql: true
+        format_sql: false
 
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
@@ -34,6 +34,11 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  # Compresión de respuestas HTTP para mejor rendimiento
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/plain
+    min-response-size: 2048
 
 jwt:
   secret: ${JWT_SECRET}
@@ -41,3 +46,35 @@ jwt:
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+
+# ─── Spring Boot Actuator (Observabilidad y Health Checks) ────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+  info:
+    env:
+      enabled: true
+
+# ─── Información del servicio (expuesta en /actuator/info) ────────────────────
+info:
+  app:
+    name: Constructora Backend - Grupo Arquinova
+    version: 1.0.0
+    description: API REST para la gestión de proyectos, lotes y usuarios del Grupo Arquinova
+    java-version: 21
+    framework: Spring Boot 3.2.5
+
+# ─── Logging estructurado ──────────────────────────────────────────────────────
+logging:
+  level:
+    root: INFO
+    com.constructora_backend: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"

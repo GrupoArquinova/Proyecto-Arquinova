@@ -33,4 +33,7 @@ public class ErrorResponseDTO {
 
     @Schema(description = "Detalles adicionales o mapa de errores por campo (si aplica)")
     private Map<String, String> detalles;
+
+    @Schema(description = "Identificador único de trazabilidad para rastreo en logs (Correlation ID)", example = "a5f8b3c9-1234-5678-9abc-def012345678")
+    private String correlationId;
 }

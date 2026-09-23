@@ -44,8 +44,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private final RateLimitConfig rateLimitConfig;
     private final ObjectMapper objectMapper;
 
-    public RateLimitingFilter(RateLimitConfig rateLimitConfig) {
-        this.rateLimitConfig = rateLimitConfig;
+    @org.springframework.beans.factory.annotation.Autowired
+    public RateLimitingFilter(@org.springframework.beans.factory.annotation.Autowired(required = false) RateLimitConfig rateLimitConfig) {
+        this.rateLimitConfig = rateLimitConfig != null ? rateLimitConfig : new RateLimitConfig();
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
         this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
