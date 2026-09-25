@@ -55,7 +55,7 @@ public class UbicacionController {
 
     @PostMapping
     @Operation(summary = "Crear ubicación", description = "Registra una nueva ubicación para un proyecto")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "CREAR_UBICACION", entidad = "UBICACIONES", descripcion = "Creación de ubicación")
     public ResponseEntity<UbicacionResponseDTO> crear(@Valid @RequestBody UbicacionRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ubicacionService.guardar(dto));
@@ -63,7 +63,7 @@ public class UbicacionController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar ubicación", description = "Modifica los datos de una ubicación existente")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "ACTUALIZAR_UBICACION", entidad = "UBICACIONES", descripcion = "Actualización de ubicación")
     public ResponseEntity<UbicacionResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody UbicacionRequestDTO dto) {
         return ResponseEntity.ok(ubicacionService.actualizar(id, dto));
@@ -71,7 +71,7 @@ public class UbicacionController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar ubicación", description = "Elimina una ubicación del sistema")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "ELIMINAR_UBICACION", entidad = "UBICACIONES", descripcion = "Eliminación de ubicación")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         ubicacionService.eliminar(id);

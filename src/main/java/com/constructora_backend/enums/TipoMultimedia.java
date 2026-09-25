@@ -6,6 +6,6 @@ public enum TipoMultimedia {
     VIDEO,
     PDF,
     PLANO,
-    PANORAMICS_360,
+    PANORAMICA_360,
     OTRO
 }

@@ -25,7 +25,7 @@ public class ZonaComunController {
 
     @GetMapping("/proyecto/{proyectoId}")
     @Operation(summary = "Listar por proyecto", description = "Obtiene todas las zonas comunes de un proyecto (incluyendo no publicadas/inactivas)")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<List<ZonaComunResponseDTO>> listarPorProyectos(@PathVariable Long proyectoId) {
         return ResponseEntity.ok(zonaComunService.listarPorProyecto(proyectoId));
     }
@@ -46,7 +46,7 @@ public class ZonaComunController {
 
     @PostMapping
     @Operation(summary = "Crear zona común", description = "Crea una nueva zona común para un proyecto")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "CREAR_ZONA_COMUN", entidad = "ZONAS_COMUNES", descripcion = "Creación de zona común")
     public ResponseEntity<ZonaComunResponseDTO> crear(@Valid @RequestBody ZonaComunRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(zonaComunService.guardar(dto));
@@ -54,7 +54,7 @@ public class ZonaComunController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar zona común", description = "Actualiza los datos de una zona común")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "ACTUALIZAR_ZONA_COMUN", entidad = "ZONAS_COMUNES", descripcion = "Actualización de zona común")
     public ResponseEntity<ZonaComunResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody ZonaComunRequestDTO dto) {
         return ResponseEntity.ok(zonaComunService.actualizar(id, dto));
@@ -62,7 +62,7 @@ public class ZonaComunController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar zona común", description = "Elimina de forma permanente una zona común")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "ELIMINAR_ZONA_COMUN", entidad = "ZONAS_COMUNES", descripcion = "Eliminación de zona común")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         zonaComunService.eliminar(id);

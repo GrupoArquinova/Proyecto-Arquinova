@@ -40,3 +40,6 @@ build/
 *.sql
 *.dump
 .agent/scratch/
+
+### K6 Load Test Results (generados localmente, no subir al repositorio) ###
+tests/load/resultados/

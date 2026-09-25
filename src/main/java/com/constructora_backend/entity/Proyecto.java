@@ -44,6 +44,10 @@ public class Proyecto {
     @Column(name = "fecha_lanzamiento")
     private LocalDate fechaLanzamiento;
 
+    @Column(name = "imagen_url", length = 500)
+    private String imagenUrl;
+
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "creado_por")
     private Usuario creadoPor;

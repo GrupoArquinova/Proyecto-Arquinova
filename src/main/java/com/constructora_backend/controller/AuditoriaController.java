@@ -16,6 +16,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,24 +35,26 @@ public class AuditoriaController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Listar todas las auditorías", description = "Retorna el historial completo de eventos de auditoría registrados en el sistema.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Historial de auditorías obtenido exitosamente",
-            content = @Content(array = @ArraySchema(schema = @Schema(implementation = AuditoriaResponseDTO.class)))),
-        @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o inválido"),
-        @ApiResponse(responseCode = "403", description = "Acceso denegado - Requiere rol de Administrador")
+            @ApiResponse(responseCode = "200", description = "Historial de auditorías obtenido exitosamente",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = AuditoriaResponseDTO.class)))),
+            @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o inválido"),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado - Requiere rol de Administrador")
     })
     public ResponseEntity<List<AuditoriaResponseDTO>> listar() {
         return ResponseEntity.ok(auditoriaService.listarTodas());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Obtener auditoría por ID", description = "Retorna los detalles de un registro de auditoría específico.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Auditoría encontrada",
-            content = @Content(schema = @Schema(implementation = AuditoriaResponseDTO.class))),
-        @ApiResponse(responseCode = "404", description = "Registro de auditoría no encontrado"),
-        @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o inválido")
+            @ApiResponse(responseCode = "200", description = "Auditoría encontrada",
+                    content = @Content(schema = @Schema(implementation = AuditoriaResponseDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Registro de auditoría no encontrado"),
+            @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o inválido")
     })
     public ResponseEntity<AuditoriaResponseDTO> obtenerPorId(
             @Parameter(description = "ID del registro de auditoría", example = "1") @PathVariable Long id) {
@@ -61,11 +64,12 @@ public class AuditoriaController {
     }
 
     @GetMapping("/entidad/{entidad}/{entidadId}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Filtrar auditorías por entidad y ID", description = "Retorna los eventos de auditoría asociados a una entidad y registro específico.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Eventos de auditoría encontrados",
-            content = @Content(array = @ArraySchema(schema = @Schema(implementation = AuditoriaResponseDTO.class)))),
-        @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o inválido")
+            @ApiResponse(responseCode = "200", description = "Eventos de auditoría encontrados",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = AuditoriaResponseDTO.class)))),
+            @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o inválido")
     })
     public ResponseEntity<List<AuditoriaResponseDTO>> obtenerPorEntidad(
             @Parameter(description = "Nombre de la entidad (ej. USUARIOS, PROYECTOS)", example = "USUARIOS") @PathVariable String entidad,
@@ -74,12 +78,13 @@ public class AuditoriaController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Registrar un evento de auditoría manual", description = "Registra un evento de auditoría personalizado en el sistema.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Evento de auditoría registrado exitosamente",
-            content = @Content(schema = @Schema(implementation = AuditoriaResponseDTO.class))),
-        @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
-        @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o inválido")
+            @ApiResponse(responseCode = "201", description = "Evento de auditoría registrado exitosamente",
+                    content = @Content(schema = @Schema(implementation = AuditoriaResponseDTO.class))),
+            @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
+            @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o inválido")
     })
     public ResponseEntity<AuditoriaResponseDTO> registrar(@Valid @RequestBody AuditoriaRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(auditoriaService.registrar(dto));

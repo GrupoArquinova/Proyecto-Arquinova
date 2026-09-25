@@ -106,7 +106,8 @@ class LoteServiceTest {
         when(estadoLoteRepository.findById(1)).thenReturn(Optional.of(estado));
         when(loteRepository.existsByEtapaIdAndCodigo(2L, "LOTE-A12")).thenReturn(true);
 
-        IllegalArgumentException excepcion = assertThrows(IllegalArgumentException.class,
+        com.constructora_backend.exception.DuplicateResourceException excepcion = assertThrows(
+                com.constructora_backend.exception.DuplicateResourceException.class,
                 () -> loteService.guardar(requestDTO));
 
         assertTrue(excepcion.getMessage().contains("Ya existe un lote con el código"));

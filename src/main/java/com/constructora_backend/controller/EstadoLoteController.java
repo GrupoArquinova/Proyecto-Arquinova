@@ -25,7 +25,7 @@ public class EstadoLoteController {
 
     @GetMapping
     @Operation(summary = "Listar todos los estados", description = "Obtiene todos los estados (incluidos inactivos)")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<List<EstadoLoteResponseDTO>> listarTodos() {
         return ResponseEntity.ok(estadoLoteService.listarTodos());
     }
@@ -46,7 +46,7 @@ public class EstadoLoteController {
 
     @PostMapping
     @Operation(summary = "Crear estado", description = "Crea un nuevo estado de lote")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "CREAR_ESTADO_LOTE", entidad = "ESTADOS_LOTE", descripcion = "Creación de estado de lote")
     public ResponseEntity<EstadoLoteResponseDTO> crear(@Valid @RequestBody EstadoLoteRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(estadoLoteService.guardar(dto));
@@ -54,7 +54,7 @@ public class EstadoLoteController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar estado", description = "Actualiza los datos de un estado existente")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "ACTUALIZAR_ESTADO_LOTE", entidad = "ESTADOS_LOTE", descripcion = "Actualización de estado de lote")
     public ResponseEntity<EstadoLoteResponseDTO> actualizar(@PathVariable Integer id, @Valid @RequestBody EstadoLoteRequestDTO dto) {
         return ResponseEntity.ok(estadoLoteService.actualizar(id, dto));
@@ -62,7 +62,7 @@ public class EstadoLoteController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar estado", description = "Elimina permanentemente un estado de lote")
-    @PreAuthorize("hasAuthority('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "ELIMINAR_ESTADO_LOTE", entidad = "ESTADOS_LOTE", descripcion = "Eliminación de estado de lote")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
         estadoLoteService.eliminar(id);

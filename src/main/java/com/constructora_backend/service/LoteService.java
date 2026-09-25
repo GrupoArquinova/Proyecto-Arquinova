@@ -62,13 +62,13 @@ public class LoteService {
     @Transactional
     public LoteResponseDTO guardar(LoteRequestDTO dto) {
         Etapa etapa = etapaRepository.findById(dto.getEtapaId())
-                .orElseThrow(() -> new RuntimeException("Etapa no encontrada con ID: " + dto.getEtapaId()));
+                .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Etapa no encontrada con ID: " + dto.getEtapaId()));
 
         EstadoLote estado = estadoLoteRepository.findById(dto.getEstadoId())
-                .orElseThrow(() -> new RuntimeException("Estado de lote no encontrado con ID: " + dto.getEstadoId()));
+                .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Estado de lote no encontrado con ID: " + dto.getEstadoId()));
 
         if (loteRepository.existsByEtapaIdAndCodigo(dto.getEtapaId(), dto.getCodigo())) {
-            throw new IllegalArgumentException("Ya existe un lote con el código '" + dto.getCodigo() + "' en esta etapa.");
+            throw new com.constructora_backend.exception.DuplicateResourceException("Ya existe un lote con el código '" + dto.getCodigo() + "' en esta etapa.");
         }
 
         Usuario usuarioCreador = null;
@@ -84,16 +84,16 @@ public class LoteService {
     @Transactional
     public LoteResponseDTO actualizar(Long id, LoteRequestDTO dto) {
         Lote existente = loteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Lote no encontrado con ID: " + id));
+                .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Lote no encontrado con ID: " + id));
 
         Etapa etapa = etapaRepository.findById(dto.getEtapaId())
-                .orElseThrow(() -> new RuntimeException("Etapa no encontrada con ID: " + dto.getEtapaId()));
+                .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Etapa no encontrada con ID: " + dto.getEtapaId()));
 
         EstadoLote estado = estadoLoteRepository.findById(dto.getEstadoId())
-                .orElseThrow(() -> new RuntimeException("Estado de lote no encontrado con ID: " + dto.getEstadoId()));
+                .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Estado de lote no encontrado con ID: " + dto.getEstadoId()));
 
         if (loteRepository.existsByEtapaIdAndCodigoAndIdNot(dto.getEtapaId(), dto.getCodigo(), id)) {
-            throw new IllegalArgumentException("Ya existe otro lote con el código '" + dto.getCodigo() + "' en esta etapa.");
+            throw new com.constructora_backend.exception.DuplicateResourceException("Ya existe otro lote con el código '" + dto.getCodigo() + "' en esta etapa.");
         }
 
         Usuario usuarioActualizar = null;
@@ -109,7 +109,7 @@ public class LoteService {
     @Transactional
     public void eliminar(Long id) {
         if (!loteRepository.existsById(id)) {
-            throw new RuntimeException("Lote no encontrado con ID: " + id);
+            throw new com.constructora_backend.exception.ResourceNotFoundException("Lote no encontrado con ID: " + id);
         }
         loteRepository.deleteById(id);
     }

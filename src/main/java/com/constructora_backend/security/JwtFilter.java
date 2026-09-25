@@ -24,10 +24,14 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
     private final UserDetailsServiceImpl userDetailsService;
+    private final TokenBlacklistService tokenBlacklistService;
 
-    public JwtFilter(JwtUtils jwtUtils, UserDetailsServiceImpl userDetailsService) {
+    public JwtFilter(JwtUtils jwtUtils,
+                     UserDetailsServiceImpl userDetailsService,
+                     @org.springframework.beans.factory.annotation.Autowired(required = false) TokenBlacklistService tokenBlacklistService) {
         this.jwtUtils = jwtUtils;
         this.userDetailsService = userDetailsService;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     @Override
@@ -37,7 +41,7 @@ public class JwtFilter extends OncePerRequestFilter {
         try {
             String token = parseJwt(request);
 
-            if (token != null && jwtUtils.validarToken(token)) {
+            if (token != null && (tokenBlacklistService == null || !tokenBlacklistService.estaRevocado(token)) && jwtUtils.validarToken(token)) {
                 String correo = jwtUtils.obtenerCorreoDelToken(token);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(correo);
 

@@ -76,7 +76,7 @@ class EstadoLoteServiceTest {
     void guardarEstadoLoteConNombreDuplicadoLanzaExcepcion() {
         when(estadoLoteRepository.existsByNombre("Disponible")).thenReturn(true);
 
-        IllegalArgumentException excepcion = assertThrows(IllegalArgumentException.class,
+        com.constructora_backend.exception.DuplicateResourceException excepcion = assertThrows(com.constructora_backend.exception.DuplicateResourceException.class,
                 () -> estadoLoteService.guardar(requestDTO));
 
         assertTrue(excepcion.getMessage().contains("Ya existe un estado de lote con el nombre"));

@@ -22,6 +22,7 @@ public class ProyectoMapper {
         dto.setPublicado(proyecto.getPublicado());
         dto.setActivo(proyecto.getActivo());
         dto.setFechaLanzamiento(proyecto.getFechaLanzamiento());
+        dto.setImagenUrl(proyecto.getImagenUrl());
         dto.setCreadoEn(proyecto.getCreadoEn());
         dto.setActualizadoEn(proyecto.getActualizadoEn());
 
@@ -61,6 +62,7 @@ public class ProyectoMapper {
             proyecto.setActivo(dto.getActivo());
         }
         proyecto.setFechaLanzamiento(dto.getFechaLanzamiento());
+        proyecto.setImagenUrl(dto.getImagenUrl());
         proyecto.setCreadoPor(creadoPor);
         proyecto.setActualizadoPor(actualizadoPor);
 
@@ -84,6 +86,7 @@ public class ProyectoMapper {
             proyecto.setActivo(dto.getActivo());
         }
         proyecto.setFechaLanzamiento(dto.getFechaLanzamiento());
+        proyecto.setImagenUrl(dto.getImagenUrl());
         proyecto.setActualizadoPor(actualizadoPor);
     }
 }

@@ -9,6 +9,8 @@ import com.constructora_backend.exception.ResourceNotFoundException;
 import com.constructora_backend.mapper.UbicacionMapper;
 import com.constructora_backend.repository.ProyectoRepository;
 import com.constructora_backend.repository.UbicacionRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ public class UbicacionService {
         this.ubicacionMapper = ubicacionMapper;
     }
 
+    @Cacheable(value = "ubicaciones")
     public List<UbicacionResponseDTO> listarTodas() {
         return ubicacionRepository.findAll()
                 .stream()
@@ -54,6 +57,7 @@ public class UbicacionService {
     }
 
     @Transactional
+    @CacheEvict(value = "ubicaciones", allEntries = true)
     public UbicacionResponseDTO guardar(UbicacionRequestDTO dto) {
         if (ubicacionRepository.existsByProyectoId(dto.getProyectoId())) {
             throw new DuplicateResourceException("El proyecto con ID " + dto.getProyectoId() + " ya tiene una ubicación registrada.");
@@ -68,6 +72,7 @@ public class UbicacionService {
     }
 
     @Transactional
+    @CacheEvict(value = "ubicaciones", allEntries = true)
     public UbicacionResponseDTO actualizar(Long id, UbicacionRequestDTO dto) {
         Ubicacion existente = ubicacionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ubicación no encontrada con ID: " + id));
@@ -86,6 +91,7 @@ public class UbicacionService {
     }
 
     @Transactional
+    @CacheEvict(value = "ubicaciones", allEntries = true)
     public void eliminar(Long id) {
         if (!ubicacionRepository.existsById(id)) {
             throw new ResourceNotFoundException("Ubicación no encontrada con ID: " + id);

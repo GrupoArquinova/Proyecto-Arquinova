@@ -39,6 +39,9 @@ public class ProyectoRequestDTO {
     @Schema(description = "Estado activo/inactivo del proyecto", example = "true")
     private Boolean activo = true;
 
+    @Schema(description = "URL de la imagen principal del proyecto (Cloudinary)", example = "https://res.cloudinary.com/...")
+    private String imagenUrl;
+
     @Schema(description = "Fecha estimada o real de lanzamiento (YYYY-MM-DD)", example = "2026-11-01")
     private LocalDate fechaLanzamiento;
 
