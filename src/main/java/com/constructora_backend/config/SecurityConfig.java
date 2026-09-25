@@ -22,6 +22,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -33,16 +35,19 @@ public class SecurityConfig {
     private final JwtFilter jwtFilter;
     private final RateLimitingFilter rateLimitingFilter;
     private final CorrelationIdFilter correlationIdFilter;
+    private final ClientRegistrationRepository clientRegistrationRepository;
 
     @Value("${cors.allowed-origins:http://localhost:4200}")
     private String allowedOrigins;
 
     public SecurityConfig(JwtFilter jwtFilter,
                           RateLimitingFilter rateLimitingFilter,
-                          @Autowired(required = false) CorrelationIdFilter correlationIdFilter) {
+                          @Autowired(required = false) CorrelationIdFilter correlationIdFilter,
+                          @Autowired(required = false) ClientRegistrationRepository clientRegistrationRepository) {
         this.jwtFilter = jwtFilter;
         this.rateLimitingFilter = rateLimitingFilter;
         this.correlationIdFilter = correlationIdFilter != null ? correlationIdFilter : new CorrelationIdFilter();
+        this.clientRegistrationRepository = clientRegistrationRepository;
     }
 
     @Bean
@@ -86,17 +91,26 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMINISTRADOR")
                         .requestMatchers("/api/admin/**").hasRole("ADMINISTRADOR")
                         .anyRequest().authenticated()
                 );
+
+        if (clientRegistrationRepository != null) {
+            http.oauth2Login(oauth2 -> oauth2
+                    .authorizationEndpoint(authorization -> authorization
+                            .baseUri("/oauth2/authorization")
+                    )
+            );
+        }
 
         http.addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+
     }
 
     @Bean

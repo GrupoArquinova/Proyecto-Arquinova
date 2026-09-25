@@ -16,6 +16,38 @@ spring:
       hibernate:
         format_sql: false
 
+  # ─── Migraciones de Base de Datos Versionadas (Flyway) ───────────────────────
+  flyway:
+    enabled: ${FLYWAY_ENABLED:false}
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
+
+  # ─── Caché y Datos Distribuidos (Redis) ──────────────────────────────────────
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 3000ms
+
+  # ─── Cola de Mensajes Asíncrona (RabbitMQ) ──────────────────────────────────
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        auto-startup: ${RABBITMQ_AUTO_STARTUP:false}
+        retry:
+          enabled: true
+          initial-interval: 3000ms
+          max-attempts: 3
+          multiplier: 2.0
+
+
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
@@ -52,10 +84,20 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: when_authorized
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
   info:
     env:
       enabled: true
@@ -77,4 +119,18 @@ logging:
     org.springframework.security: WARN
     org.hibernate.SQL: WARN
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
+
+# ─── Resiliencia y Circuit Breaker (Resilience4j) ─────────────────────────────
+resilience4j:
+  circuitbreaker:
+    instances:
+      emailService:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 5
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10000ms
+        permitted-number-of-calls-in-half-open-state: 2
+        automatic-transition-from-open-to-half-open-enabled: true
+

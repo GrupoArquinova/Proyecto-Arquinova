@@ -62,4 +62,13 @@ class EmailServiceTest {
                 emailService.enviarCorreoRecuperacion(destino, token)
         );
     }
+
+    @Test
+    @DisplayName("enviarCorreoFallback - Debe ejecutarse limpiamente sin lanzar excepciones")
+    void enviarCorreoFallback_EjecutaSinExcepciones() {
+        assertDoesNotThrow(() ->
+                emailService.enviarCorreoFallback("cliente@correo.com", "uuid-token-12345", new RuntimeException("SMTP Down"))
+        );
+    }
 }
+

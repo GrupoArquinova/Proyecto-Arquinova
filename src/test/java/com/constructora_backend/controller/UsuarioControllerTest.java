@@ -92,7 +92,7 @@ class UsuarioControllerTest {
         UsuarioRequestDTO requestDTO = new UsuarioRequestDTO();
         requestDTO.setNombreCompleto("Nuevo Usuario");
         requestDTO.setCorreo("nuevo@test.com");
-        requestDTO.setPassword("password123");
+        requestDTO.setPassword("Password123!");
         requestDTO.setRolId(1L);
 
         when(usuarioService.guardar(any(UsuarioRequestDTO.class))).thenReturn(usuarioResponseDTO);

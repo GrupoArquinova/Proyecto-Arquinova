@@ -15,12 +15,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class ProyectoService {
 
     private final ProyectoRepository proyectoRepository;
@@ -73,6 +75,7 @@ public class ProyectoService {
                 .map(proyectoMapper::toDTO);
     }
 
+    @Transactional
     @CacheEvict(value = "proyectos_publicos", allEntries = true)
     public ProyectoResponseDTO guardar(ProyectoRequestDTO dto) {
         Empresa empresa = resolverEmpresa(dto.getEmpresaId());
@@ -90,6 +93,7 @@ public class ProyectoService {
         return proyectoMapper.toDTO(guardado);
     }
 
+    @Transactional
     @CacheEvict(value = "proyectos_publicos", allEntries = true)
     public ProyectoResponseDTO actualizar(Long id, ProyectoRequestDTO dto) {
         Proyecto existente = proyectoRepository.findById(id)
@@ -110,6 +114,7 @@ public class ProyectoService {
         return proyectoMapper.toDTO(actualizado);
     }
 
+    @Transactional
     @CacheEvict(value = "proyectos_publicos", allEntries = true)
     public void desactivar(Long id) {
         Proyecto existente = proyectoRepository.findById(id)

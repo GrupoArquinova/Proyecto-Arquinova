@@ -41,6 +41,9 @@ public class ProyectoResponseDTO {
     @Schema(description = "Fecha de lanzamiento del proyecto", example = "2026-11-01")
     private LocalDate fechaLanzamiento;
 
+    @Schema(description = "URL de la imagen principal del proyecto (Cloudinary)", example = "https://res.cloudinary.com/...")
+    private String imagenUrl;
+
     @Schema(description = "ID del usuario que creó el proyecto", example = "1")
     private Long creadoPorId;
 
