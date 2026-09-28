@@ -27,6 +27,7 @@ public class EtapaService {
     @Autowired
     private EtapaMapper etapaMapper;
 
+    @Transactional(readOnly = true)
     public List<EtapaResponseDTO> listarTodas() {
         return etapaRepository.findAll()
                 .stream()

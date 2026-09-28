@@ -31,6 +31,12 @@ public class LoteMapper {
         if (lote.getEtapa() != null) {
             dto.setEtapaId(lote.getEtapa().getId());
             dto.setEtapaNombre(lote.getEtapa().getNombre());
+
+            // Extraer info del proyecto a través de la etapa
+            if (lote.getEtapa().getProyecto() != null) {
+                dto.setProyectoId(lote.getEtapa().getProyecto().getId());
+                dto.setProyectoNombre(lote.getEtapa().getProyecto().getNombre());
+            }
         }
 
         if (lote.getEstado() != null) {

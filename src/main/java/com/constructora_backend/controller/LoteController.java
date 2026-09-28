@@ -23,6 +23,12 @@ public class LoteController {
     @Autowired
     private LoteService loteService;
 
+    @GetMapping
+    @Operation(summary = "Listar todos los lotes", description = "Obtiene todos los lotes registrados en el sistema")
+    public ResponseEntity<List<LoteResponseDTO>> obtenerLotes() {
+        return ResponseEntity.ok(loteService.listarTodos());
+    }
+
     @GetMapping("/etapa/{etapaId}")
     @Operation(summary = "Listar lotes por etapa", description = "Obtiene todos los lotes asociados a una etapa (incluidos inactivos y no publicados)")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
@@ -68,4 +74,22 @@ public class LoteController {
         loteService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{id}/estado")
+    @Operation(summary = "Cambiar estado de lote")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<LoteResponseDTO> cambiarEstado(@PathVariable Long id, @RequestBody java.util.Map<String, Long> body) {
+        Long estadoId = body.get("estadoId");
+        return ResponseEntity.ok(loteService.cambiarEstado(id, estadoId));
+    }
+
+    @PatchMapping("/{id}/activo")
+    @Operation(summary = "Activar o desactivar lote")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<Void> toggleActivo(@PathVariable Long id, @RequestBody java.util.Map<String, Boolean> body) {
+        Boolean activo = body.get("activo");
+        loteService.toggleActivo(id, activo);
+        return ResponseEntity.noContent().build();
+    }
+
 }

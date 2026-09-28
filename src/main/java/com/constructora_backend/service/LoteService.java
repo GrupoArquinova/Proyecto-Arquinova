@@ -37,6 +37,16 @@ public class LoteService {
     @Autowired
     private LoteMapper loteMapper;
 
+    // --- NUEVO MÉTODO AGREGADO AQUÍ ---
+    @Transactional(readOnly = true)
+    public List<LoteResponseDTO> listarTodos() {
+        return loteRepository.findAll()
+                .stream()
+                .map(loteMapper::toDTO)
+                .collect(Collectors.toList());
+    }
+    // ----------------------------------
+
     @Transactional(readOnly = true)
     public List<LoteResponseDTO> listarPorEtapa(Long etapaId) {
         return loteRepository.findByEtapaId(etapaId)
@@ -113,4 +123,25 @@ public class LoteService {
         }
         loteRepository.deleteById(id);
     }
+
+    @Transactional
+    public LoteResponseDTO cambiarEstado(Long id, Long estadoId) {
+        Lote lote = loteRepository.findById(id)
+                .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Lote no encontrado con ID: " + id));
+        EstadoLote estado = estadoLoteRepository.findById(Math.toIntExact(estadoId))
+                .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Estado no encontrado con ID: " + estadoId));
+
+        lote.setEstado(estado);
+        loteRepository.save(lote);
+        return loteMapper.toDTO(lote);
+    }
+
+    @Transactional
+    public void toggleActivo(Long id, Boolean activo) {
+        Lote lote = loteRepository.findById(id)
+                .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Lote no encontrado con ID: " + id));
+        lote.setActivo(activo);
+        loteRepository.save(lote);
+    }
+
 }
