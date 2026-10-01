@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Data
 public class SolicitudContactoResponseDTO {
 
-    private Long Id;
+    private Long id;
     private Integer estadoId;
     private String estadoNombre;
     private Long proyectoId;
@@ -22,8 +22,8 @@ public class SolicitudContactoResponseDTO {
     private String ip;
     private String userAgent;
     private Long atendidaPorId;
-    private String atentidaPorNombre;
-    private LocalDateTime atentidaEn;
+    private String atendidaPorNombre;
+    private LocalDateTime atendidaEn;
     private String observacionesInternas;
     private LocalDateTime creadoEn;
     private LocalDateTime actualizadoEn;

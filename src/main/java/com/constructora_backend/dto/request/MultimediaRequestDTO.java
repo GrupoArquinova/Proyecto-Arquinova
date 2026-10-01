@@ -25,7 +25,7 @@ public class MultimediaRequestDTO {
     private String descripcion;
 
     @NotBlank(message = "La URL del recurso es obligatorio")
-    @Size(max = 150, message = "La URL no puede superar los 1500 caracteres")
+    @Size(max = 1500, message = "La URL no puede superar los 1500 caracteres")
     private String url;
 
     private String nombreArchivo;
@@ -36,6 +36,7 @@ public class MultimediaRequestDTO {
 
     @Min(value = 1, message = "El orden minimo deber ser 1")
     private Integer orden = 1;
+
 
     private Boolean portada = false;
     private Boolean publicado = true;

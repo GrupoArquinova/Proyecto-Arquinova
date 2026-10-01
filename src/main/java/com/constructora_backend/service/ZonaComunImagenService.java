@@ -4,6 +4,7 @@ import com.constructora_backend.dto.request.ZonaComunImagenRequestDTO;
 import com.constructora_backend.dto.response.ZonaComunImagenResponseDTO;
 import com.constructora_backend.entity.ZonaComun;
 import com.constructora_backend.entity.ZonaComunImagen;
+import com.constructora_backend.exception.ResourceNotFoundException;
 import com.constructora_backend.mapper.ZonaComunImagenMapper;
 import com.constructora_backend.repository.ZonaComunImagenRepository;
 import com.constructora_backend.repository.ZonaComunRepository;
@@ -27,6 +28,7 @@ public class ZonaComunImagenService {
     @Autowired
     private ZonaComunImagenMapper imagenMapper;
 
+    @Transactional(readOnly = true)
     public List<ZonaComunImagenResponseDTO> listarPorZonaComun(Long zonaComunId) {
         return imagenRepository.findByZonaComunIdOrderByOrdenAsc(zonaComunId)
                 .stream()
@@ -34,6 +36,7 @@ public class ZonaComunImagenService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public Optional<ZonaComunImagenResponseDTO> obtenerPorId(Long id) {
         return imagenRepository.findById(id)
                 .map(imagenMapper::toDTO);
@@ -42,7 +45,7 @@ public class ZonaComunImagenService {
     @Transactional
     public ZonaComunImagenResponseDTO guardar(ZonaComunImagenRequestDTO dto) {
         ZonaComun zonaComun = zonaComunRepository.findById(dto.getZonaComunId())
-                .orElseThrow(() -> new RuntimeException("Zona común no encontrada con ID: " + dto.getZonaComunId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Zona común no encontrada con ID: " + dto.getZonaComunId()));
 
         if (Boolean.TRUE.equals(dto.getEsPrincipal())) {
             imagenRepository.desmarcarPrincipalesDeZonaComun(dto.getZonaComunId());
@@ -56,10 +59,10 @@ public class ZonaComunImagenService {
     @Transactional
     public ZonaComunImagenResponseDTO actualizar(Long id, ZonaComunImagenRequestDTO dto) {
         ZonaComunImagen existente = imagenRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Imagen de zona común no encontrada con ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Imagen de zona común no encontrada con ID: " + id));
 
         ZonaComun zonaComun = zonaComunRepository.findById(dto.getZonaComunId())
-                .orElseThrow(() -> new RuntimeException("Zona común no encontrada con ID: " + dto.getZonaComunId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Zona común no encontrada con ID: " + dto.getZonaComunId()));
 
         if (Boolean.TRUE.equals(dto.getEsPrincipal())) {
             imagenRepository.desmarcarPrincipalesDeZonaComun(dto.getZonaComunId());
@@ -73,7 +76,7 @@ public class ZonaComunImagenService {
     @Transactional
     public void marcarComoPrincipal(Long id) {
         ZonaComunImagen existente = imagenRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Imagen de zona común no encontrada con ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Imagen de zona común no encontrada con ID: " + id));
 
         imagenRepository.desmarcarPrincipalesDeZonaComun(existente.getZonaComun().getId());
         existente.setEsPrincipal(true);
@@ -83,7 +86,7 @@ public class ZonaComunImagenService {
     @Transactional
     public void eliminar(Long id) {
         if (!imagenRepository.existsById(id)) {
-            throw new RuntimeException("Imagen no encontrada con ID: " + id);
+            throw new ResourceNotFoundException("Imagen no encontrada con ID: " + id);
         }
         imagenRepository.deleteById(id);
     }

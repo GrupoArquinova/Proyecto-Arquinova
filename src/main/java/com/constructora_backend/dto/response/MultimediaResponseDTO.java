@@ -11,9 +11,13 @@ import java.time.LocalDateTime;
 public class MultimediaResponseDTO {
     private Long id;
     private Long proyectoId;
+    private String proyectoNombre;
     private Long loteId;
+    private String loteCodigo;
     private Long zonaComunId;
+    private String zonaComunNombre;
     private Long casaModeloId;
+    private String casaModeloNombre;
     private TipoMultimedia tipo;
     private String titulo;
     private String descripcion;

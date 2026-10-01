@@ -40,7 +40,7 @@ public class ZonaComunImagenController {
     @Operation(summary = "Crear nueva imagen para zona común", description = "Registra una nueva imagen asociada a una zona común")
     @PostMapping
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    @Auditable(accion = "CREAR_ZONA_COMUN_IMAGEN", entidad = "ZonaComunImagen", descripcion = "Creación de imagen para zona común")
+    @Auditable(accion = "CREAR_ZONA_COMUN_IMAGEN", entidad = "ZONA_COMUN_IMAGENES", descripcion = "Creación de imagen para zona común")
     public ResponseEntity<ZonaComunImagenResponseDTO> crear(@Valid @RequestBody ZonaComunImagenRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(imagenService.guardar(dto));
     }
@@ -48,7 +48,7 @@ public class ZonaComunImagenController {
     @Operation(summary = "Actualizar imagen de zona común", description = "Actualiza los datos de una imagen existente")
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    @Auditable(accion = "ACTUALIZAR_ZONA_COMUN_IMAGEN", entidad = "ZonaComunImagen", descripcion = "Actualización de imagen de zona común")
+    @Auditable(accion = "ACTUALIZAR_ZONA_COMUN_IMAGEN", entidad = "ZONA_COMUN_IMAGENES", descripcion = "Actualización de imagen de zona común")
     public ResponseEntity<ZonaComunImagenResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody ZonaComunImagenRequestDTO dto) {
         return ResponseEntity.ok(imagenService.actualizar(id, dto));
     }
@@ -56,7 +56,7 @@ public class ZonaComunImagenController {
     @Operation(summary = "Marcar imagen como principal", description = "Establece una imagen como la principal de la zona común")
     @PatchMapping("/{id}/principal")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    @Auditable(accion = "MARCAR_PRINCIPAL_ZONA_COMUN_IMAGEN", entidad = "ZonaComunImagen", descripcion = "Marcado de imagen como principal de zona común")
+    @Auditable(accion = "MARCAR_PRINCIPAL_ZONA_COMUN_IMAGEN", entidad = "ZONA_COMUN_IMAGENES", descripcion = "Marcado de imagen como principal de zona común")
     public ResponseEntity<Void> marcarComoPrincipal(@PathVariable Long id) {
         imagenService.marcarComoPrincipal(id);
         return ResponseEntity.noContent().build();
@@ -65,7 +65,7 @@ public class ZonaComunImagenController {
     @Operation(summary = "Eliminar imagen de zona común", description = "Elimina permanentemente una imagen asociada a una zona común")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    @Auditable(accion = "ELIMINAR_ZONA_COMUN_IMAGEN", entidad = "ZonaComunImagen", descripcion = "Eliminación de imagen de zona común")
+    @Auditable(accion = "ELIMINAR_ZONA_COMUN_IMAGEN", entidad = "ZONA_COMUN_IMAGENES", descripcion = "Eliminación de imagen de zona común")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         imagenService.eliminar(id);
         return ResponseEntity.noContent().build();

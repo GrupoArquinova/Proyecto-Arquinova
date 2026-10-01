@@ -30,7 +30,7 @@ public class UbicacionRequestDTO {
     private String departamento;
 
     @Schema(description = "Puntos de referencia o indicaciones adicionales de llegada", example = "A 500 metros después del Club Campestre, costado oriental.")
-    private String referencia;
+    private String referencias;
 
     @DecimalMin(value = "-90.0", message = "La latitud debe ser mayor o igual a -90")
     @DecimalMax(value = "90.0", message = "La latitud debe ser menor o igual a 90")
@@ -44,7 +44,7 @@ public class UbicacionRequestDTO {
 
     @Size(max = 1000, message = "La URL de Google Maps no puede superar los 1000 caracteres")
     @Schema(description = "URL o iframe para Google Maps", example = "https://maps.google.com/?q=4.5388890,-75.6727780")
-    private String googleMapUrl;
+    private String googleMapsUrl;
 
     @Size(max = 1000, message = "La URL de Urbanismo no puede superar los 1000 caracteres")
     @Schema(description = "URL del plano de urbanismo o render general", example = "https://example.com/urbanismo/plano-general.jpg")

@@ -32,6 +32,7 @@ public class UbicacionService {
     }
 
     @Cacheable(value = "ubicaciones")
+    @Transactional(readOnly = true)
     public List<UbicacionResponseDTO> listarTodas() {
         return ubicacionRepository.findAll()
                 .stream()
