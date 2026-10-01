@@ -23,7 +23,7 @@ public class SolicitudContactoMapper {
         dto.setConsentimientoDatos(entidad.getCosentimientoDatos());
         dto.setIp(entidad.getIp());
         dto.setUserAgent(entidad.getUserAgent());
-        dto.setAtentidaEn(entidad.getAtendidaEn());
+        dto.setAtendidaEn(entidad.getAtendidaEn());
         dto.setObservacionesInternas(entidad.getObservacionesInternas());
         dto.setCreadoEn(entidad.getCreadoEn());
         dto.setActualizadoEn(entidad.getActualizadoEn());
@@ -45,7 +45,7 @@ public class SolicitudContactoMapper {
 
         if (entidad.getAtendidaPor() != null) {
             dto.setAtendidaPorId(entidad.getAtendidaPor().getId());
-            dto.setAtentidaPorNombre(entidad.getAtendidaPor().getNombreCompleto());
+            dto.setAtendidaPorNombre(entidad.getAtendidaPor().getNombreCompleto());
         }
 
         return dto;

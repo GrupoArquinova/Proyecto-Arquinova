@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/multimedia")
+@RequestMapping("/api/multimedia")
 @RequiredArgsConstructor
 @Tag(name = "Multimedia", description = "Endpoints para la gestión y consulta de recursos multimedia (imágenes, videos, planos, etc.)")
 public class MultimediaController {
@@ -27,10 +27,8 @@ public class MultimediaController {
     @Operation(summary = "Crear recurso multimedia", description = "Registra un nuevo archivo multimedia asociado a un proyecto, lote, zona común o casa modelo")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "CREAR_MULTIMEDIA", entidad = "MULTIMEDIA", descripcion = "Registro de nuevo recurso multimedia")
-    public ResponseEntity<MultimediaResponseDTO> crear(
-            @Valid @RequestBody MultimediaRequestDTO dto,
-            @RequestAttribute(name = "usuarioId", required = false) Long usuarioId) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(multimediaService.guardar(dto, usuarioId));
+    public ResponseEntity<MultimediaResponseDTO> crear(@Valid @RequestBody MultimediaRequestDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(multimediaService.guardar(dto));
     }
 
     @GetMapping("/{id}")
@@ -46,6 +44,12 @@ public class MultimediaController {
             @PathVariable Long entidadId,
             @RequestParam(defaultValue = "false") boolean soloPublicados) {
         return ResponseEntity.ok(multimediaService.listarPorEntidad(tipoEntidad, entidadId, soloPublicados));
+    }
+
+    @GetMapping
+    @Operation(summary = "Listar toda la multimedia", description = "Retorna una lista con todos los recursos multimedia registrados en el sistema")
+    public ResponseEntity<List<MultimediaResponseDTO>> listarTodos() {
+        return ResponseEntity.ok(multimediaService.listarTodos());
     }
 
     @PutMapping("/{id}")

@@ -12,7 +12,10 @@ import com.constructora_backend.repository.ContenidoInstitucionalRepository;
 import com.constructora_backend.repository.EmpresaRepository;
 import com.constructora_backend.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,9 +31,9 @@ public class ContenidoInstitucionalService {
 
     @Autowired
     public ContenidoInstitucionalService(ContenidoInstitucionalRepository contenidoRepository,
-                                          EmpresaRepository empresaRepository,
-                                          UsuarioRepository usuarioRepository,
-                                          ContenidoInstitucionalMapper contenidoMapper) {
+                                         EmpresaRepository empresaRepository,
+                                         UsuarioRepository usuarioRepository,
+                                         ContenidoInstitucionalMapper contenidoMapper) {
         this.contenidoRepository = contenidoRepository;
         this.empresaRepository = empresaRepository;
         this.usuarioRepository = usuarioRepository;
@@ -46,6 +49,7 @@ public class ContenidoInstitucionalService {
     }
 
     // ───── Listar por empresa ─────
+    @Transactional(readOnly = true)
     public List<ContenidoInstitucionalResponseDTO> listarPorEmpresa(Long empresaId) {
         validarEmpresaExiste(empresaId);
         return contenidoRepository.findByEmpresaId(empresaId)
@@ -79,13 +83,12 @@ public class ContenidoInstitucionalService {
     // ───── Crear ─────
     public ContenidoInstitucionalResponseDTO guardar(ContenidoInstitucionalRequestDTO dto) {
         Empresa empresa = resolverEmpresa(dto.getEmpresaId());
-        Usuario usuario = resolverUsuario(dto.getActualizadoPorId());
+        Usuario usuario = obtenerUsuarioAutenticado();
 
-        // Validar unicidad empresa + sección
         if (contenidoRepository.existsByEmpresaIdAndSeccion(dto.getEmpresaId(), dto.getSeccion())) {
             throw new DuplicateResourceException(
-                "Ya existe un contenido para la empresa ID " + dto.getEmpresaId()
-                + " con la sección: " + dto.getSeccion());
+                    "Ya existe un contenido para la empresa ID " + dto.getEmpresaId()
+                            + " con la sección: " + dto.getSeccion());
         }
 
         ContenidoInstitucional entidad = contenidoMapper.toEntity(dto, empresa, usuario);
@@ -94,25 +97,31 @@ public class ContenidoInstitucionalService {
     }
 
     // ───── Actualizar ─────
+    @Transactional
     public ContenidoInstitucionalResponseDTO actualizar(Long id, ContenidoInstitucionalRequestDTO dto) {
         ContenidoInstitucional existente = contenidoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Contenido institucional no encontrado con ID: " + id));
 
         Empresa empresa = resolverEmpresa(dto.getEmpresaId());
-        Usuario usuario = resolverUsuario(dto.getActualizadoPorId());
+        Usuario usuario = obtenerUsuarioAutenticado();
 
-        // Validar que la combinación empresa+sección no pertenezca a otro registro
         if (!existente.getEmpresa().getId().equals(dto.getEmpresaId())
                 || !existente.getSeccion().equals(dto.getSeccion())) {
             if (contenidoRepository.existsByEmpresaIdAndSeccion(dto.getEmpresaId(), dto.getSeccion())) {
                 throw new DuplicateResourceException(
-                    "Ya existe un contenido para la empresa ID " + dto.getEmpresaId()
-                    + " con la sección: " + dto.getSeccion());
+                        "Ya existe un contenido para la empresa ID " + dto.getEmpresaId()
+                                + " con la sección: " + dto.getSeccion());
             }
         }
 
         contenidoMapper.updateEntityFromDTO(dto, existente, empresa, usuario);
         ContenidoInstitucional actualizado = contenidoRepository.save(existente);
+
+        if (actualizado.getEmpresa() != null) {
+            org.hibernate.Hibernate.initialize(actualizado.getEmpresa());
+            actualizado.getEmpresa().getNombre(); // Esto obliga a Hibernate a traer los datos de la empresa
+        }
+
         return contenidoMapper.toDTO(actualizado);
     }
 
@@ -130,10 +139,14 @@ public class ContenidoInstitucionalService {
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada con ID: " + empresaId));
     }
 
-    private Usuario resolverUsuario(Long usuarioId) {
-        if (usuarioId == null) return null;
-        return usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + usuarioId));
+    private Usuario obtenerUsuarioAutenticado() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal())) {
+            String correo = authentication.getName();
+            return usuarioRepository.findByCorreo(correo).orElse(null);
+        }
+        return null;
     }
 
     private void validarEmpresaExiste(Long empresaId) {

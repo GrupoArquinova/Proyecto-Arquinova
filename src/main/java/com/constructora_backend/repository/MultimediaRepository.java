@@ -1,5 +1,6 @@
 package com.constructora_backend.repository;
 
+import com.constructora_backend.dto.response.MultimediaResponseDTO;
 import com.constructora_backend.entity.Multimedia;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -16,4 +17,5 @@ public interface MultimediaRepository extends JpaRepository<Multimedia, Long> {
 
     List<Multimedia> findByProyectoIdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(Long proyectoId);
     List<Multimedia> findByLoteIdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(Long loteId);
+    List<Multimedia> findByActivoTrue(); // O retornar List<Multimedia>
 }

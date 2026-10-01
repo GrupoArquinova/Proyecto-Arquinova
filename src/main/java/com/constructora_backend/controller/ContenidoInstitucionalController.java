@@ -17,6 +17,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -106,6 +107,7 @@ public class ContenidoInstitucionalController {
     // ───── CREAR ─────
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "CREAR_CONTENIDO_INSTITUCIONAL", entidad = "CONTENIDOS_INSTITUCIONALES",
                descripcion = "Registro de nuevo contenido institucional de empresa")
     @Operation(summary = "Crear contenido institucional",
@@ -126,6 +128,7 @@ public class ContenidoInstitucionalController {
     // ───── ACTUALIZAR ─────
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "ACTUALIZAR_CONTENIDO_INSTITUCIONAL", entidad = "CONTENIDOS_INSTITUCIONALES",
                descripcion = "Actualización de contenido institucional de empresa")
     @Operation(summary = "Actualizar contenido institucional",
@@ -147,6 +150,7 @@ public class ContenidoInstitucionalController {
     // ───── ELIMINAR ─────
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "ELIMINAR_CONTENIDO_INSTITUCIONAL", entidad = "CONTENIDOS_INSTITUCIONALES",
                descripcion = "Eliminación de contenido institucional de empresa")
     @Operation(summary = "Eliminar contenido institucional",

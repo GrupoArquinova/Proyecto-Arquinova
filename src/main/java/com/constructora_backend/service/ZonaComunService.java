@@ -4,6 +4,8 @@ import com.constructora_backend.dto.request.ZonaComunRequestDTO;
 import com.constructora_backend.dto.response.ZonaComunResponseDTO;
 import com.constructora_backend.entity.Proyecto;
 import com.constructora_backend.entity.ZonaComun;
+import com.constructora_backend.exception.DuplicateResourceException;
+import com.constructora_backend.exception.ResourceNotFoundException;
 import com.constructora_backend.mapper.ZonaComunMapper;
 import com.constructora_backend.repository.ProyectoRepository;
 import com.constructora_backend.repository.ZonaComunRepository;
@@ -43,7 +45,7 @@ public class ZonaComunService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public Optional<ZonaComunResponseDTO> obtenerPorId(Long id) {
         return zonaComunRepository.findById(id)
                 .map(zonaComunMapper::toDTO);
@@ -52,10 +54,10 @@ public class ZonaComunService {
     @Transactional
     public ZonaComunResponseDTO guardar(ZonaComunRequestDTO dto) {
         Proyecto proyecto = proyectoRepository.findById(dto.getProyectoId())
-                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado con ID: " + dto.getProyectoId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + dto.getProyectoId()));
 
         if (zonaComunRepository.existsByProyectoIdAndNombre(dto.getProyectoId(), dto.getNombre())) {
-            throw new IllegalArgumentException("Ya existe una zona común con el nombre '" + dto.getNombre() + "' en este proyecto.");
+            throw new DuplicateResourceException("Ya existe una zona común con el nombre '" + dto.getNombre() + "' en este proyecto.");
         }
 
         ZonaComun zona = zonaComunMapper.toEntity(dto, proyecto);
@@ -66,13 +68,13 @@ public class ZonaComunService {
     @Transactional
     public ZonaComunResponseDTO actualizar(Long id, ZonaComunRequestDTO dto) {
         ZonaComun existente = zonaComunRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Zona común no encontrada con ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Zona común no encontrada con ID: " + id));
 
         Proyecto proyecto = proyectoRepository.findById(dto.getProyectoId())
-                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado con ID: " + dto.getProyectoId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + dto.getProyectoId()));
 
         if (zonaComunRepository.existsByProyectoIdAndNombreAndIdNot(dto.getProyectoId(), dto.getNombre(), id)) {
-            throw new IllegalArgumentException("Ya existe otra zona común con el nombre '" + dto.getNombre() + "' en este proyecto.");
+            throw new DuplicateResourceException("Ya existe otra zona común con el nombre '" + dto.getNombre() + "' en este proyecto.");
         }
 
         zonaComunMapper.updateEntityFromDTO(dto, existente, proyecto);
@@ -83,7 +85,7 @@ public class ZonaComunService {
     @Transactional
     public void eliminar(Long id) {
         if (!zonaComunRepository.existsById(id)) {
-            throw new RuntimeException("Zona común no encontrada con ID: " + id);
+            throw new ResourceNotFoundException("Zona común no encontrada con ID: " + id);
         }
         zonaComunRepository.deleteById(id);
     }

@@ -72,6 +72,15 @@ server:
     mime-types: application/json,application/xml,text/plain
     min-response-size: 2048
 
+  # Límites de tamaño para permitir imágenes grandes (Base64)
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
+
+  tomcat:
+    max-http-post-size: 25MB
+
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:86400000}
@@ -133,4 +142,4 @@ resilience4j:
         wait-duration-in-open-state: 10000ms
         permitted-number-of-calls-in-half-open-state: 2
         automatic-transition-from-open-to-half-open-enabled: true
-
+

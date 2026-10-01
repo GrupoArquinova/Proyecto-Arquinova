@@ -44,7 +44,7 @@ public class Proyecto {
     @Column(name = "fecha_lanzamiento")
     private LocalDate fechaLanzamiento;
 
-    @Column(name = "imagen_url", length = 500)
+    @Column(name = "imagen_url", length = 500, columnDefinition = "LONGTEXT")
     private String imagenUrl;
 
 

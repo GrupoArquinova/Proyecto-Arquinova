@@ -6,6 +6,8 @@ import com.constructora_backend.entity.*;
 import com.constructora_backend.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,8 +24,14 @@ public class MultimediaService {
     private final CasaModeloRepository casaModeloRepository;
     private final UsuarioRepository usuarioRepository;
 
+    @Transactional(readOnly = true)
+    public List<MultimediaResponseDTO> listarTodos() {
+        List<Multimedia> lista = multimediaRepository.findByActivoTrue();
+        return lista.stream().map(this::mapToDTO).toList();
+    }
+
     @Transactional
-    public MultimediaResponseDTO guardar(MultimediaRequestDTO dto, Long usuarioId) {
+    public MultimediaResponseDTO guardar(MultimediaRequestDTO dto) {
         validarUnSoloPadre(dto);
 
         Proyecto proyecto = dto.getProyectoId() != null
@@ -42,13 +50,11 @@ public class MultimediaService {
                 : null;
 
         CasaModelo casaModelo = dto.getCasaModeloId() != null
-                ?casaModeloRepository.findById(dto.getCasaModeloId())
+                ? casaModeloRepository.findById(dto.getCasaModeloId())
                 .orElseThrow(() -> new EntityNotFoundException("Casa modelo no encontrada con ID: " + dto.getCasaModeloId()))
                 : null;
 
-        Usuario usuario = usuarioId != null
-                ? usuarioRepository.findById(usuarioId).orElse(null)
-                : null;
+        Usuario usuario = obtenerUsuarioAutenticado();
 
         Multimedia multimedia = Multimedia.builder()
                 .proyecto(proyecto)
@@ -122,6 +128,16 @@ public class MultimediaService {
         multimediaRepository.save(multimedia);
     }
 
+    private Usuario obtenerUsuarioAutenticado() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal())) {
+            String correo = authentication.getName();
+            return usuarioRepository.findByCorreo(correo).orElse(null);
+        }
+        return null;
+    }
+
     private void validarUnSoloPadre(MultimediaRequestDTO dto) {
         int count = 0;
         if (dto.getProyectoId() != null) count++;
@@ -138,9 +154,13 @@ public class MultimediaService {
         return MultimediaResponseDTO.builder()
                 .id(entity.getId())
                 .proyectoId(entity.getProyecto() != null ? entity.getProyecto().getId() : null)
+                .proyectoNombre(entity.getProyecto() != null ? entity.getProyecto().getNombre() : null)
                 .loteId(entity.getLote() != null ? entity.getLote().getId() : null)
+                .loteCodigo(entity.getLote() != null ? entity.getLote().getCodigo() : null)
                 .zonaComunId(entity.getZonaComun() != null ? entity.getZonaComun().getId() : null)
+                .zonaComunNombre(entity.getZonaComun() != null ? entity.getZonaComun().getNombre() : null)
                 .casaModeloId(entity.getCasaModelo() != null ? entity.getCasaModelo().getId() : null)
+                .casaModeloNombre(entity.getCasaModelo() != null ? entity.getCasaModelo().getNombre() : null)
                 .tipo(entity.getTipo())
                 .titulo(entity.getTitulo())
                 .descripcion(entity.getDescripcion())
