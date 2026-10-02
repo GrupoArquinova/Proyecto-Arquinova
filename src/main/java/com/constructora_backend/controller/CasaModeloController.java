@@ -23,6 +23,13 @@ public class CasaModeloController {
     @Autowired
     private CasaModeloService casaModeloService;
 
+    @GetMapping
+    @Operation(summary = "Listar todas las casas modelo", description = "Obtiene todas las casas modelo registradas, de todos los proyectos")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<List<CasaModeloResponseDTO>> listarTodos() {
+        return ResponseEntity.ok(casaModeloService.listarTodos());
+    }
+
     @GetMapping("/proyecto/{proyectoId}")
     @Operation(summary = "Listar por proyecto", description = "Obtiene todas las casas modelo de un proyecto")
     @PreAuthorize("hasRole('ADMINISTRADOR')")

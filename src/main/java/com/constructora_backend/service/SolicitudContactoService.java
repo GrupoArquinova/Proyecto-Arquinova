@@ -6,6 +6,7 @@ import com.constructora_backend.dto.response.SolicitudContactoResponseDTO;
 import com.constructora_backend.entity.*;
 import com.constructora_backend.mapper.SolicitudContactoMapper;
 import com.constructora_backend.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class SolicitudContactoService {
 
     private static final Integer ESTADO_NUEVA = 1;
@@ -37,6 +39,9 @@ public class SolicitudContactoService {
 
     @Autowired
     private SolicitudContactoMapper solicitudMapper;
+
+    @Autowired
+    private EmailService emailService; // Inyección de tu servicio de correo con RabbitMQ y Circuit Breaker
 
     @Transactional(readOnly = true)
     public List<SolicitudContactoResponseDTO> listarTodas() {
@@ -85,8 +90,26 @@ public class SolicitudContactoService {
                     .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Lote no encontrado con ID: "+ dto.getLoteId()));
         }
 
+        // 1. Mapear y guardar la solicitud en la Base de Datos
         SolicitudContacto solicitud = solicitudMapper.toEntity(dto, estadoInicial, proyecto, lote);
         SolicitudContacto guardada = solicitudRepository.save(solicitud);
+
+        // 2. Disparar el envío de correo electrónico a la empresa de forma segura
+        try {
+            String nombreProyectoStr = (proyecto != null) ? proyecto.getNombre() : "No especificado / General";
+            emailService.enviarCorreoNuevaSolicitud(
+                    guardada.getNombre(),
+                    guardada.getTelefono(),
+                    guardada.getCorreo(),
+                    nombreProyectoStr,
+                    dto.getMensaje()
+            );
+            log.info("Notificación de correo disparada exitosamente para la solicitud ID: {}", guardada.getId());
+        } catch (Exception ex) {
+            // Se captura la excepción para evitar que un fallo en el servidor SMTP o broker interrumpa el registro principal en BD
+            log.error("La solicitud se guardó correctamente en BD, pero ocurrió un fallo al enviar la notificación por correo: {}", ex.getMessage());
+        }
+
         return solicitudMapper.toDTO(guardada);
     }
 

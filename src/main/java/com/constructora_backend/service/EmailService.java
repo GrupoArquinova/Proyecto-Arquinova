@@ -36,7 +36,6 @@ public class EmailService {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-
     public EmailService(JavaMailSender mailSender) {
         this(mailSender, null);
     }
@@ -101,10 +100,47 @@ public class EmailService {
     }
 
     /**
+     * Envía un correo de notificación al equipo de ventas cuando ingresa una nueva solicitud web.
+     */
+    @org.springframework.scheduling.annotation.Async("taskExecutor")
+    @CircuitBreaker(name = "emailService", fallbackMethod = "enviarCorreoNotificacionFallback")
+    public void enviarCorreoNuevaSolicitud(String nombreCliente, String telefono, String correoCliente, String proyecto, String mensajeCliente) {
+        String correoEmpresa = "ventas@arquinova.com.co";
+
+        SimpleMailMessage mensaje = new SimpleMailMessage();
+        mensaje.setFrom(remitente != null && !remitente.isBlank() ? remitente : "noreply@constructora.com");
+        mensaje.setTo(correoEmpresa);
+        mensaje.setSubject("Nueva solicitud de contacto de: " + nombreCliente);
+        mensaje.setText("Has recibido una nueva solicitud de información desde la web:\n\n"
+                + "👤 Nombre: " + nombreCliente + "\n"
+                + "📞 Teléfono: " + telefono + "\n"
+                + "✉️ Correo: " + correoCliente + "\n"
+                + "🏗️ Proyecto de interés: " + (proyecto != null ? proyecto : "No especificado") + "\n"
+                + "💬 Mensaje del cliente:\n" + mensajeCliente + "\n\n"
+                + "--- \nEste correo fue generado automáticamente por el sistema de la constructora.");
+
+        try {
+            mailSender.send(mensaje);
+            log.info("Correo de notificación de solicitud enviado exitosamente a la empresa para el cliente: {}", nombreCliente);
+        } catch (MailException e) {
+            log.error("Error al enviar el correo de notificación de solicitud: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
      * Fallback de Circuit Breaker cuando el servidor SMTP se encuentra caído.
      */
     public void enviarCorreoFallback(String destino, String token, Throwable throwable) {
         log.error("CIRCUIT BREAKER ACTIVADO [emailService]: No fue posible enviar correo de recuperación a {} debido a: {}. Notificación preservada para reintento.",
                 destino, throwable.getMessage());
+    }
+
+    /**
+     * Fallback de Circuit Breaker para el envío de notificaciones corporativas.
+     */
+    public void enviarCorreoNotificacionFallback(String nombreCliente, String telefono, String correoCliente, String proyecto, String mensajeCliente, Throwable throwable) {
+        log.error("CIRCUIT BREAKER ACTIVADO [emailService]: No fue posible enviar la notificación de contacto para {} debido a: {}.",
+                nombreCliente, throwable.getMessage());
     }
 }

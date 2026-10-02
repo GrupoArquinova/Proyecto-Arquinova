@@ -18,6 +18,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/solicitudes-contacto")
+@CrossOrigin(origins = "*") // Permite peticiones desde el frontend público sin bloqueos CORS
 @Tag(name = "Solicitudes de Contacto", description = "Endpoints para la recepción, atención y administración de solicitudes de contacto")
 public class SolicitudContactoController {
 
