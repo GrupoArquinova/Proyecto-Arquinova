@@ -2,6 +2,12 @@ spring:
   application:
     name: constructora-backend
 
+  # Ningún endpoint recibe archivos (van a Cloudinary). Límite bajo por seguridad.
+  servlet:
+    multipart:
+      max-file-size: 1MB
+      max-request-size: 1MB
+
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:constructora_web}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Bogota
     username: ${DB_USERNAME}
@@ -17,10 +23,13 @@ spring:
         format_sql: false
 
   # ─── Migraciones de Base de Datos Versionadas (Flyway) ───────────────────────
+  # Desactivado por defecto en local (FLYWAY_ENABLED=true en Kubernetes / bases nuevas).
+  # En una base existente sin historial de Flyway, se toma como línea base la V1
+  # (no la vuelve a ejecutar) y solo se aplican las migraciones posteriores.
   flyway:
     enabled: ${FLYWAY_ENABLED:false}
     baseline-on-migrate: true
-    baseline-version: 0
+    baseline-version: 1
     locations: classpath:db/migration
 
 
@@ -72,14 +81,10 @@ server:
     mime-types: application/json,application/xml,text/plain
     min-response-size: 2048
 
-  # Límites de tamaño para permitir imágenes grandes (Base64)
-  servlet:
-    multipart:
-      max-file-size: 25MB
-      max-request-size: 25MB
-
+  # Las imágenes y archivos se suben directo del navegador a Cloudinary (subida firmada),
+  # así que la API solo recibe JSON pequeño con URLs. Límite para formularios:
   tomcat:
-    max-http-post-size: 25MB
+    max-http-form-post-size: 1MB
 
 jwt:
   secret: ${JWT_SECRET}
