@@ -41,6 +41,7 @@ public class ContenidoInstitucionalService {
     }
 
     // ───── Listar todos ─────
+    @Transactional(readOnly = true)
     public List<ContenidoInstitucionalResponseDTO> listarTodos() {
         return contenidoRepository.findAll()
                 .stream()
@@ -59,6 +60,7 @@ public class ContenidoInstitucionalService {
     }
 
     // ───── Listar publicados por empresa (para vista pública) ─────
+    @Transactional(readOnly = true)
     public List<ContenidoInstitucionalResponseDTO> listarPublicadosPorEmpresa(Long empresaId) {
         validarEmpresaExiste(empresaId);
         return contenidoRepository.findByEmpresaIdAndPublicadoTrue(empresaId)
@@ -68,12 +70,14 @@ public class ContenidoInstitucionalService {
     }
 
     // ───── Obtener por ID ─────
+    @Transactional(readOnly = true)
     public Optional<ContenidoInstitucionalResponseDTO> obtenerPorId(Long id) {
         return contenidoRepository.findById(id)
                 .map(contenidoMapper::toDTO);
     }
 
     // ───── Obtener por empresa y sección ─────
+    @Transactional(readOnly = true)
     public Optional<ContenidoInstitucionalResponseDTO> obtenerPorEmpresaYSeccion(Long empresaId, String seccion) {
         validarEmpresaExiste(empresaId);
         return contenidoRepository.findByEmpresaIdAndSeccion(empresaId, seccion)

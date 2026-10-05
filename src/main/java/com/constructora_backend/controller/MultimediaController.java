@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,12 +39,16 @@ public class MultimediaController {
     }
 
     @GetMapping("/{tipoEntidad}/{entidadId}")
-    @Operation(summary = "Listar multimedia por entidad", description = "Obtiene los recursos multimedia asociados a una entidad (proyecto, lote, zonacomun, casamodelo)")
+    @Operation(summary = "Listar multimedia por entidad", description = "Obtiene los recursos multimedia asociados a una entidad (proyecto, lote, zonacomun, casamodelo). Sin sesión de ADMINISTRADOR solo devuelve los publicados.")
     public ResponseEntity<List<MultimediaResponseDTO>> listarPorEntidad(
             @PathVariable String tipoEntidad,
             @PathVariable Long entidadId,
-            @RequestParam(defaultValue = "false") boolean soloPublicados) {
-        return ResponseEntity.ok(multimediaService.listarPorEntidad(tipoEntidad, entidadId, soloPublicados));
+            @RequestParam(defaultValue = "false") boolean soloPublicados,
+            Authentication authentication) {
+        boolean esAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMINISTRADOR".equals(a.getAuthority()));
+
+        return ResponseEntity.ok(multimediaService.listarPorEntidad(tipoEntidad, entidadId, soloPublicados || !esAdmin));
     }
 
     @GetMapping

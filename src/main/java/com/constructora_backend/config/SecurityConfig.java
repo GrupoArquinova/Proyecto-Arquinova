@@ -81,11 +81,18 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/proyectos/**", "/api/lotes/**", "/api/ubicaciones/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/solicitudes-contacto/publico").permitAll()
+                        // Lecturas públicas del sitio. Los endpoints solo-admin dentro de estas rutas
+                        // (p. ej. GET /api/lotes) se protegen con @PreAuthorize en el controlador.
                         .requestMatchers(HttpMethod.GET,
                                 "/api/proyectos/**", "/api/lotes/**", "/api/ubicaciones/**",
                                 "/api/casas-modelo/**", "/api/zonas-comunes/**").permitAll()
+                        // Solo las consultas por entidad (/{tipoEntidad}/{id}); el listado completo y el
+                        // detalle por ID siguen requiriendo sesión. Para el público el controlador fuerza
+                        // que solo se devuelva lo publicado.
+                        .requestMatchers(HttpMethod.GET, "/api/multimedia/*/*").permitAll()
+                        // Textos institucionales ("Respaldo / Nosotros") de una empresa, solo publicados.
+                        .requestMatchers(HttpMethod.GET, "/api/contenidos-institucionales/empresa/**").permitAll()
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",

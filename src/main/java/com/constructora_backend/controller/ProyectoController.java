@@ -17,6 +17,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,6 +35,15 @@ public class ProyectoController {
         this.proyectoService = proyectoService;
     }
 
+    private boolean esAdmin(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMINISTRADOR".equals(a.getAuthority()));
+    }
+
+    private boolean esPublico(ProyectoResponseDTO proyecto) {
+        return Boolean.TRUE.equals(proyecto.getPublicado()) && Boolean.TRUE.equals(proyecto.getActivo());
+    }
+
     // ───── LISTAR TODOS / PUBLICADOS ─────
 
     @GetMapping
@@ -45,8 +55,12 @@ public class ProyectoController {
     })
     public ResponseEntity<List<ProyectoResponseDTO>> listar(
             @Parameter(description = "Si es true, sólo retorna proyectos publicados y activos", example = "false")
-            @RequestParam(defaultValue = "false") boolean soloPublicados) {
-        List<ProyectoResponseDTO> lista = soloPublicados ? proyectoService.listarPublicados() : proyectoService.listarTodos();
+            @RequestParam(defaultValue = "false") boolean soloPublicados,
+            Authentication authentication) {
+        // Sin sesión de ADMINISTRADOR solo se exponen proyectos publicados y activos
+        List<ProyectoResponseDTO> lista = (soloPublicados || !esAdmin(authentication))
+                ? proyectoService.listarPublicados()
+                : proyectoService.listarTodos();
         return ResponseEntity.ok(lista);
     }
 
@@ -61,8 +75,10 @@ public class ProyectoController {
         @ApiResponse(responseCode = "404", description = "Proyecto no encontrado")
     })
     public ResponseEntity<ProyectoResponseDTO> obtenerPorId(
-            @Parameter(description = "ID del proyecto", example = "1") @PathVariable Long id) {
+            @Parameter(description = "ID del proyecto", example = "1") @PathVariable Long id,
+            Authentication authentication) {
         return proyectoService.obtenerPorId(id)
+                .filter(p -> esAdmin(authentication) || esPublico(p))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -78,8 +94,13 @@ public class ProyectoController {
         @ApiResponse(responseCode = "404", description = "Empresa no encontrada")
     })
     public ResponseEntity<List<ProyectoResponseDTO>> listarPorEmpresa(
-            @Parameter(description = "ID de la empresa", example = "1") @PathVariable Long empresaId) {
-        return ResponseEntity.ok(proyectoService.listarPorEmpresa(empresaId));
+            @Parameter(description = "ID de la empresa", example = "1") @PathVariable Long empresaId,
+            Authentication authentication) {
+        List<ProyectoResponseDTO> lista = proyectoService.listarPorEmpresa(empresaId);
+        if (!esAdmin(authentication)) {
+            lista = lista.stream().filter(this::esPublico).toList();
+        }
+        return ResponseEntity.ok(lista);
     }
 
     // ───── OBTENER POR EMPRESA Y SLUG ─────
@@ -94,8 +115,10 @@ public class ProyectoController {
     })
     public ResponseEntity<ProyectoResponseDTO> obtenerPorEmpresaYSlug(
             @Parameter(description = "ID de la empresa", example = "1") @PathVariable Long empresaId,
-            @Parameter(description = "Slug único del proyecto", example = "condominio-campestre-los-alamos") @PathVariable String slug) {
+            @Parameter(description = "Slug único del proyecto", example = "condominio-campestre-los-alamos") @PathVariable String slug,
+            Authentication authentication) {
         return proyectoService.obtenerPorEmpresaYSlug(empresaId, slug)
+                .filter(p -> esAdmin(authentication) || esPublico(p))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
