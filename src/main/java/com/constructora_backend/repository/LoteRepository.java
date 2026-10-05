@@ -11,6 +11,7 @@ public interface LoteRepository extends JpaRepository<Lote, Long> {
 
     List<Lote> findByEtapaId(Long etapaId);
     List<Lote> findByEtapaIdAndPublicadoTrueAndActivoTrue(Long etapaId);
+    List<Lote> findByPublicadoTrueAndActivoTrue();
     List<Lote> findByEstadoId(Integer estadoId);
     boolean existsByEtapaIdAndCodigo(Long etapaId, String codigo);
     boolean existsByEtapaIdAndCodigoAndIdNot(Long etapaId, String codigo, Long id);

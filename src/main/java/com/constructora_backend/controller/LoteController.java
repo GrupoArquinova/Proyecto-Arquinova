@@ -1,6 +1,8 @@
 package com.constructora_backend.controller;
 
 import com.constructora_backend.dto.request.LoteRequestDTO;
+import com.constructora_backend.dto.request.CambiarEstadoLoteDTO;
+import com.constructora_backend.dto.response.HistorialEstadoLoteDTO;
 import com.constructora_backend.dto.response.LoteResponseDTO;
 import com.constructora_backend.service.LoteService;
 import jakarta.validation.Valid;
@@ -9,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import com.constructora_backend.aspect.Auditable;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,9 +27,16 @@ public class LoteController {
     private LoteService loteService;
 
     @GetMapping
-    @Operation(summary = "Listar todos los lotes", description = "Obtiene todos los lotes registrados en el sistema")
+    @Operation(summary = "Listar todos los lotes (admin)", description = "Obtiene todos los lotes registrados, incluidos inactivos y no publicados. Requiere rol ADMINISTRADOR.")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<List<LoteResponseDTO>> obtenerLotes() {
         return ResponseEntity.ok(loteService.listarTodos());
+    }
+
+    @GetMapping("/publicos")
+    @Operation(summary = "Listar lotes públicos", description = "Obtiene solo los lotes publicados y activos, para el sitio público")
+    public ResponseEntity<List<LoteResponseDTO>> obtenerLotesPublicos() {
+        return ResponseEntity.ok(loteService.listarPublicadosYActivos());
     }
 
     @GetMapping("/etapa/{etapaId}")
@@ -43,10 +53,14 @@ public class LoteController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Obtener lote por ID", description = "Retorna los detalles de un lote específico")
-    public ResponseEntity<LoteResponseDTO> obtenerPorId(@PathVariable Long id) {
-        return loteService.obtenerPorId(id)
-                .map(ResponseEntity::ok)
+    @Operation(summary = "Obtener lote por ID", description = "Retorna los detalles de un lote. Un ADMINISTRADOR ve cualquier lote; el público solo ve lotes publicados y activos (los demás responden 404).")
+    public ResponseEntity<LoteResponseDTO> obtenerPorId(@PathVariable Long id, Authentication authentication) {
+        boolean esAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMINISTRADOR".equals(a.getAuthority()));
+        java.util.Optional<LoteResponseDTO> lote = esAdmin
+                ? loteService.obtenerPorId(id)
+                : loteService.obtenerPublicoPorId(id);
+        return lote.map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -76,11 +90,19 @@ public class LoteController {
     }
 
     @PatchMapping("/{id}/estado")
-    @Operation(summary = "Cambiar estado de lote")
+    @Operation(summary = "Cambiar estado de lote",
+            description = "Cambia el estado comercial del lote y lo registra en el historial. Cuerpo: {\"estadoId\": 2, \"observaciones\": \"opcional\"} (también acepta \"nuevoEstadoId\").")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ResponseEntity<LoteResponseDTO> cambiarEstado(@PathVariable Long id, @RequestBody java.util.Map<String, Long> body) {
-        Long estadoId = body.get("estadoId");
-        return ResponseEntity.ok(loteService.cambiarEstado(id, estadoId));
+    @Auditable(accion = "CAMBIAR_ESTADO_LOTE", entidad = "LOTES", descripcion = "Cambio de estado de lote e inserción en historial")
+    public ResponseEntity<LoteResponseDTO> cambiarEstado(@PathVariable Long id, @Valid @RequestBody CambiarEstadoLoteDTO dto) {
+        return ResponseEntity.ok(loteService.cambiarEstado(id, dto.getNuevoEstadoId().intValue(), dto.getObservaciones()));
+    }
+
+    @GetMapping("/{id}/historial")
+    @Operation(summary = "Consultar historial de estados", description = "Lista cronológica (más reciente primero) de los cambios de estado de un lote")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<List<HistorialEstadoLoteDTO>> obtenerHistorial(@PathVariable Long id) {
+        return ResponseEntity.ok(loteService.consultarHistorial(id));
     }
 
     @PatchMapping("/{id}/activo")

@@ -12,6 +12,7 @@ public class CambiarEstadoLoteDTO {
 
     @NotNull(message = "El ID del nuevo estado es obligatorio")
     @Schema(description = "ID del nuevo estado a asignar al lote", example = "2")
+    @JsonAlias({"estadoId"})
     private Short nuevoEstadoId;
 
     @Size(max = 500, message = "La observación no debe exceder los 500 caracteres")

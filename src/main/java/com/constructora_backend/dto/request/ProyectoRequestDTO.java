@@ -4,6 +4,7 @@ import com.constructora_backend.enums.EstadoProyecto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -40,6 +41,9 @@ public class ProyectoRequestDTO {
     private Boolean activo = true;
 
     @Schema(description = "URL de la imagen principal del proyecto (Cloudinary)", example = "https://res.cloudinary.com/...")
+    @Size(max = 1000, message = "La URL de la imagen no puede superar los 1000 caracteres")
+    @Pattern(regexp = "^$|^https?://\\S+$",
+             message = "La imagen debe ser una URL http(s) (por ejemplo de Cloudinary), no un archivo en Base64")
     private String imagenUrl;
 
     @Schema(description = "Fecha estimada o real de lanzamiento (YYYY-MM-DD)", example = "2026-11-01")
