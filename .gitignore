@@ -43,3 +43,6 @@ build/
 
 ### K6 Load Test Results (generados localmente, no subir al repositorio) ###
 tests/load/resultados/
+
+### Secretos de Kubernetes (usar k8s/secret.example.yaml como plantilla) ###
+k8s/secret.yaml
