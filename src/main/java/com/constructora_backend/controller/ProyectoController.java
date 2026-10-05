@@ -154,25 +154,4 @@ public class ProyectoController {
         proyectoService.desactivar(id);
         return ResponseEntity.noContent().build();
     }
-
-    // ───── SUBIR IMAGEN / ARCHIVO ─────
-
-    @PostMapping("/upload")
-    @Operation(summary = "Subir imagen o archivo de proyecto",
-            description = "Recibe un archivo multimedia y retorna la ruta o URL de acceso.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Archivo subido exitosamente"),
-            @ApiResponse(responseCode = "400", description = "Archivo inválido o vacío"),
-            @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o inválido")
-    })
-    public ResponseEntity<String> uploadArchivo(
-            @Parameter(description = "Archivo a subir", required = true)
-            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
-
-        // TODO: Aquí debes llamar a tu servicio (ej. proyectoService.guardarArchivo(file))
-        // Por ahora, como ejemplo, retornamos un mensaje o la URL simulada:
-        String urlArchivo = "https://tu-servidor.com/uploads/" + file.getOriginalFilename();
-
-        return ResponseEntity.ok(urlArchivo);
-    }
 }

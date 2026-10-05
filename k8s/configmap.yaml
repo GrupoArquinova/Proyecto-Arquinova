@@ -17,6 +17,8 @@ data:
   MAIL_HOST: "smtp.gmail.com"
   MAIL_PORT: "587"
   MAIL_FROM: "noreply@constructora.com"
+  CLOUDINARY_CLOUD_NAME: "CHANGE_ME_CLOUD_NAME"
+  CLOUDINARY_FOLDER: "arquinova"
   FLYWAY_ENABLED: "true"
   RABBITMQ_AUTO_STARTUP: "true"
 

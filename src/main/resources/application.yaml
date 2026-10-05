@@ -88,6 +88,14 @@ jwt:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
 
+# ─── Cloudinary (subidas firmadas desde el panel de administración) ──────────
+# El API secret solo vive en el servidor; el frontend pide una firma a /api/cloudinary/firma.
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
+  folder: ${CLOUDINARY_FOLDER:arquinova}
+
 # ─── Spring Boot Actuator (Observabilidad y Health Checks) ────────────────────
 management:
   endpoints:

@@ -98,6 +98,10 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME:-noreply@constructora.com}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-secret}
       MAIL_FROM: ${MAIL_FROM:-noreply@constructora.com}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      CLOUDINARY_FOLDER: ${CLOUDINARY_FOLDER:-arquinova}
       FLYWAY_ENABLED: "true"
       RABBITMQ_AUTO_STARTUP: "true"
     depends_on:
