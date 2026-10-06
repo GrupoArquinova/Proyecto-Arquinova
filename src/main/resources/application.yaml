@@ -9,7 +9,7 @@ spring:
       max-request-size: 1MB
 
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:constructora_web}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Bogota
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:constructora_web}?sslMode=${DB_SSL_MODE:DISABLED}&allowPublicKeyRetrieval=true&serverTimezone=America/Bogota
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
