@@ -38,8 +38,13 @@ build/
 # Antigravity / Logs y Temporales
 *.log
 *.sql
+# ...excepto las migraciones de Flyway, que sí deben versionarse
+!src/main/resources/db/migration/*.sql
 *.dump
 .agent/scratch/
 
 ### K6 Load Test Results (generados localmente, no subir al repositorio) ###
 tests/load/resultados/
+
+### Secretos de Kubernetes (usar k8s/secret.example.yaml como plantilla) ###
+k8s/secret.yaml

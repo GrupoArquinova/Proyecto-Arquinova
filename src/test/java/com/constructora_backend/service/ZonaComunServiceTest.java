@@ -1,5 +1,6 @@
 package com.constructora_backend.service;
 
+import com.constructora_backend.exception.DuplicateResourceException;
 import com.constructora_backend.dto.request.ZonaComunRequestDTO;
 import com.constructora_backend.dto.response.ZonaComunResponseDTO;
 import com.constructora_backend.entity.Proyecto;
@@ -82,7 +83,8 @@ class ZonaComunServiceTest {
         when(proyectoRepository.findById(1L)).thenReturn(Optional.of(proyecto));
         when(zonaComunRepository.existsByProyectoIdAndNombre(1L, "Gimnasio")).thenReturn(true);
 
-        IllegalArgumentException excepcion = assertThrows(IllegalArgumentException.class,
+        // El servicio lanza DuplicateResourceException (responde 409 en la API)
+        DuplicateResourceException excepcion = assertThrows(DuplicateResourceException.class,
                 () -> zonaComunService.guardar(requestDTO));
 
         assertTrue(excepcion.getMessage().contains("Ya existe una zona común"));

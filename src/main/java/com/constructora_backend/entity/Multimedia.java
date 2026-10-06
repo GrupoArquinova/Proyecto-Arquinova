@@ -4,7 +4,9 @@ import com.constructora_backend.enums.TipoMultimedia;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -45,7 +47,9 @@ public class Multimedia {
     @JoinColumn(name = "casa_modelo_id", foreignKey = @ForeignKey(name = "fk_multimedia_casa"))
     private CasaModelo casaModelo;
 
+    // Texto (VARCHAR) y no ENUM de MySQL: así agregar un tipo nuevo al enum de Java no exige alterar la tabla
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)
     private TipoMultimedia tipo;
 

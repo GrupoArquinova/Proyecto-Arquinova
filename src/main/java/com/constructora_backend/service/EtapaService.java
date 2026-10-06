@@ -35,11 +35,13 @@ public class EtapaService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public Optional<EtapaResponseDTO> obtenerPorId(Long id) {
         return etapaRepository.findById(id)
                 .map(etapaMapper::toDTO);
     }
 
+    @Transactional(readOnly = true)
     public List<EtapaResponseDTO> listarPorProyecto(Long proyectoId) {
         return etapaRepository.findByProyectoIdOrderByOrdenAsc(proyectoId)
                 .stream()
@@ -47,6 +49,7 @@ public class EtapaService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<EtapaResponseDTO> listarActivasPorProyecto(Long proyectoId) {
         return etapaRepository.findByProyectoIdAndActivoTrueOrderByOrdenAsc(proyectoId)
                 .stream()

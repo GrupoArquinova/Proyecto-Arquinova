@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,6 +34,11 @@ public class ContenidoInstitucionalController {
     @Autowired
     public ContenidoInstitucionalController(ContenidoInstitucionalService contenidoService) {
         this.contenidoService = contenidoService;
+    }
+
+    private boolean esAdmin(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMINISTRADOR".equals(a.getAuthority()));
     }
 
     // ───── LISTAR TODOS ─────
@@ -62,8 +68,10 @@ public class ContenidoInstitucionalController {
     public ResponseEntity<List<ContenidoInstitucionalResponseDTO>> listarPorEmpresa(
             @Parameter(description = "ID de la empresa", example = "1") @PathVariable Long empresaId,
             @Parameter(description = "Si es true, sólo retorna contenidos publicados", example = "false")
-            @RequestParam(defaultValue = "false") boolean soloPublicados) {
-        List<ContenidoInstitucionalResponseDTO> lista = soloPublicados
+            @RequestParam(defaultValue = "false") boolean soloPublicados,
+            Authentication authentication) {
+        // Sin sesión de ADMINISTRADOR solo se exponen los contenidos publicados
+        List<ContenidoInstitucionalResponseDTO> lista = (soloPublicados || !esAdmin(authentication))
                 ? contenidoService.listarPublicadosPorEmpresa(empresaId)
                 : contenidoService.listarPorEmpresa(empresaId);
         return ResponseEntity.ok(lista);
@@ -98,8 +106,10 @@ public class ContenidoInstitucionalController {
     })
     public ResponseEntity<ContenidoInstitucionalResponseDTO> obtenerPorEmpresaYSeccion(
             @Parameter(description = "ID de la empresa", example = "1") @PathVariable Long empresaId,
-            @Parameter(description = "Nombre de la sección institucional", example = "MISION") @PathVariable String seccion) {
+            @Parameter(description = "Nombre de la sección institucional", example = "MISION") @PathVariable String seccion,
+            Authentication authentication) {
         return contenidoService.obtenerPorEmpresaYSeccion(empresaId, seccion)
+                .filter(c -> esAdmin(authentication) || Boolean.TRUE.equals(c.getPublicado()))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

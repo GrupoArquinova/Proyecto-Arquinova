@@ -95,8 +95,12 @@ public class MultimediaService {
             case "lote" -> soloPublicados
                     ? multimediaRepository.findByLoteIdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(entidadId)
                     : multimediaRepository.findByLoteIdAndActivoTrueOrderByOrdenAsc(entidadId);
-            case "zonacomun", "zona_comun" -> multimediaRepository.findByZonaComunIdAndActivoTrueOrderByOrdenAsc(entidadId);
-            case "casamodelo", "casa_modelo" -> multimediaRepository.findByCasaModelo_IdAndActivoTrueOrderByOrdenAsc(entidadId);
+            case "zonacomun", "zona_comun" -> soloPublicados
+                    ? multimediaRepository.findByZonaComunIdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(entidadId)
+                    : multimediaRepository.findByZonaComunIdAndActivoTrueOrderByOrdenAsc(entidadId);
+            case "casamodelo", "casa_modelo" -> soloPublicados
+                    ? multimediaRepository.findByCasaModelo_IdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(entidadId)
+                    : multimediaRepository.findByCasaModelo_IdAndActivoTrueOrderByOrdenAsc(entidadId);
             default -> throw new IllegalArgumentException("Tipo de entidad no soportado: " + tipoEntidad);
         };
 

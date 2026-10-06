@@ -17,5 +17,7 @@ public interface MultimediaRepository extends JpaRepository<Multimedia, Long> {
 
     List<Multimedia> findByProyectoIdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(Long proyectoId);
     List<Multimedia> findByLoteIdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(Long loteId);
+    List<Multimedia> findByZonaComunIdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(Long zonaComunId);
+    List<Multimedia> findByCasaModelo_IdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(Long casaModeloId);
     List<Multimedia> findByActivoTrue(); // O retornar List<Multimedia>
 }
