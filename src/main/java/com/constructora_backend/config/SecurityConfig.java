@@ -86,7 +86,7 @@ public class SecurityConfig {
                         // (p. ej. GET /api/lotes) se protegen con @PreAuthorize en el controlador.
                         .requestMatchers(HttpMethod.GET,
                                 "/api/proyectos/**", "/api/lotes/**", "/api/ubicaciones/**",
-                                "/api/casas-modelo/**", "/api/zonas-comunes/**").permitAll()
+                                "/api/casas-modelo/**", "/api/zonas-comunes/**", "/api/puntos-360/**").permitAll()
                         // Solo las consultas por entidad (/{tipoEntidad}/{id}); el listado completo y el
                         // detalle por ID siguen requiriendo sesión. Para el público el controlador fuerza
                         // que solo se devuelva lo publicado.
