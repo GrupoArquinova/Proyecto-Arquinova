@@ -6,12 +6,17 @@ import com.constructora_backend.dto.response.SolicitudContactoResponseDTO;
 import com.constructora_backend.entity.*;
 import com.constructora_backend.mapper.SolicitudContactoMapper;
 import com.constructora_backend.repository.*;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.List;
 
 import java.util.Optional;
 
@@ -97,6 +102,91 @@ class SolicitudContactoServiceTest {
         assertEquals(10L, resultado.getId());
         assertEquals("Carlos Pérez", resultado.getNombre());
         verify(solicitudRepository, times(1)).save(any(SolicitudContacto.class));
+    }
+
+    @AfterEach
+    void limpiarSesion() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void iniciarSesion(String correo) {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(correo, null, List.of()));
+    }
+
+    private Usuario usuario(Long id, String nombre, String correo) {
+        Usuario u = new Usuario();
+        u.setId(id);
+        u.setNombreCompleto(nombre);
+        u.setCorreo(correo);
+        return u;
+    }
+
+    @Test
+    void atenderSolicitudRegistraALaPersonaConLaSesionIniciada() {
+        Usuario maria = usuario(7L, "Maria Gomez", "maria@arquinova.com");
+        iniciarSesion("maria@arquinova.com");
+        when(solicitudRepository.findById(10L)).thenReturn(Optional.of(solicitud));
+        when(estadoSolicitudRepository.findById(2)).thenReturn(Optional.of(estadoAtendida));
+        when(usuarioRepository.findByCorreo("maria@arquinova.com")).thenReturn(Optional.of(maria));
+        when(solicitudRepository.save(solicitud)).thenReturn(solicitud);
+        when(solicitudMapper.toDTO(solicitud)).thenReturn(responseDTO);
+
+        solicitudService.atenderSolicitud(10L, atencionDTO);
+
+        assertSame(maria, solicitud.getAtendidaPor());
+        assertNotNull(solicitud.getAtendidaEn());
+    }
+
+    @Test
+    void atenderSolicitudIgnoraElUsuarioDelCuerpoCuandoHaySesion() {
+        Usuario maria = usuario(7L, "Maria Gomez", "maria@arquinova.com");
+        iniciarSesion("maria@arquinova.com");
+        atencionDTO.setAtendidaPorId(99L);
+        when(solicitudRepository.findById(10L)).thenReturn(Optional.of(solicitud));
+        when(estadoSolicitudRepository.findById(2)).thenReturn(Optional.of(estadoAtendida));
+        when(usuarioRepository.findByCorreo("maria@arquinova.com")).thenReturn(Optional.of(maria));
+        when(solicitudRepository.save(solicitud)).thenReturn(solicitud);
+        when(solicitudMapper.toDTO(solicitud)).thenReturn(responseDTO);
+
+        solicitudService.atenderSolicitud(10L, atencionDTO);
+
+        assertSame(maria, solicitud.getAtendidaPor());
+        verify(usuarioRepository, never()).findById(99L);
+    }
+
+    @Test
+    void atenderSolicitudCambiaLaPersonaYLaFechaEnCadaAtencion() {
+        Usuario antes = usuario(3L, "Pedro Ruiz", "pedro@arquinova.com");
+        Usuario ahora = usuario(7L, "Maria Gomez", "maria@arquinova.com");
+        solicitud.setAtendidaPor(antes);
+        solicitud.setAtendidaEn(java.time.LocalDateTime.of(2026, 10, 2, 15, 21));
+        iniciarSesion("maria@arquinova.com");
+        when(solicitudRepository.findById(10L)).thenReturn(Optional.of(solicitud));
+        when(estadoSolicitudRepository.findById(2)).thenReturn(Optional.of(estadoAtendida));
+        when(usuarioRepository.findByCorreo("maria@arquinova.com")).thenReturn(Optional.of(ahora));
+        when(solicitudRepository.save(solicitud)).thenReturn(solicitud);
+        when(solicitudMapper.toDTO(solicitud)).thenReturn(responseDTO);
+
+        solicitudService.atenderSolicitud(10L, atencionDTO);
+
+        assertSame(ahora, solicitud.getAtendidaPor());
+        assertTrue(solicitud.getAtendidaEn().isAfter(java.time.LocalDateTime.of(2026, 10, 2, 15, 21)));
+    }
+
+    @Test
+    void atenderSolicitudSinSesionUsaElIdDelCuerpo() {
+        Usuario pedro = usuario(3L, "Pedro Ruiz", "pedro@arquinova.com");
+        atencionDTO.setAtendidaPorId(3L);
+        when(solicitudRepository.findById(10L)).thenReturn(Optional.of(solicitud));
+        when(estadoSolicitudRepository.findById(2)).thenReturn(Optional.of(estadoAtendida));
+        when(usuarioRepository.findById(3L)).thenReturn(Optional.of(pedro));
+        when(solicitudRepository.save(solicitud)).thenReturn(solicitud);
+        when(solicitudMapper.toDTO(solicitud)).thenReturn(responseDTO);
+
+        solicitudService.atenderSolicitud(10L, atencionDTO);
+
+        assertSame(pedro, solicitud.getAtendidaPor());
     }
 
     @Test

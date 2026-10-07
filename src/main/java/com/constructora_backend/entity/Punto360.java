@@ -11,8 +11,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Botón colocado sobre la imagen 360° del entorno, la vista aérea o el plano de urbanismo.
- * Apunta a un lote (o a una etapa, en el plano) y abre su tarjeta o su imagen 360°.
+ * Botón colocado sobre la imagen 360° del entorno, la vista aérea, el plano de urbanismo o la imagen de zonas
+ * destacadas. Apunta a un lote, a una etapa (en el plano) o a una zona común y abre su tarjeta o su imagen 360°.
  */
 @Entity
 @Table(name = "puntos_360",
@@ -45,6 +45,10 @@ public class Punto360 {
     @JoinColumn(name = "etapa_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
     private Etapa etapa;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "zona_comun_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    private ZonaComun zonaComun;
+
     @Column(nullable = false, length = 120)
     private String etiqueta;
 
@@ -55,7 +59,7 @@ public class Punto360 {
     @Column(precision = 9, scale = 6)
     private BigDecimal pitch;
 
-    /** Posición en porcentaje (0–100) sobre el plano (URBANISMO). */
+    /** Posición en porcentaje (0–100) sobre el plano (URBANISMO) o la imagen de zonas destacadas (ZONAS). */
     @Column(name = "pos_x", precision = 6, scale = 3)
     private BigDecimal posX;
 

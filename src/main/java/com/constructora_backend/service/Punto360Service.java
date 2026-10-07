@@ -5,12 +5,14 @@ import com.constructora_backend.dto.response.Punto360ResponseDTO;
 import com.constructora_backend.entity.Etapa;
 import com.constructora_backend.entity.Lote;
 import com.constructora_backend.entity.Proyecto;
+import com.constructora_backend.entity.ZonaComun;
 import com.constructora_backend.entity.Punto360;
 import com.constructora_backend.enums.EscenaPunto360;
 import com.constructora_backend.repository.EtapaRepository;
 import com.constructora_backend.repository.LoteRepository;
 import com.constructora_backend.repository.Punto360Repository;
 import com.constructora_backend.repository.ProyectoRepository;
+import com.constructora_backend.repository.ZonaComunRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,9 @@ public class Punto360Service {
 
     @Autowired
     private EtapaRepository etapaRepository;
+
+    @Autowired
+    private ZonaComunRepository zonaComunRepository;
 
     @Transactional(readOnly = true)
     public List<Punto360ResponseDTO> listarPorProyecto(Long proyectoId, EscenaPunto360 escena) {
@@ -65,12 +70,15 @@ public class Punto360Service {
         punto360Repository.deleteById(id);
     }
 
-    /** Valida que el punto traiga la posición que su escena necesita y que lote/etapa sean del mismo proyecto. */
+    /** Valida que el punto traiga la posición que su escena necesita y que lote, etapa o zona sean del mismo proyecto. */
     private void aplicar(Punto360 punto, Punto360RequestDTO dto) {
-        boolean esPlano = dto.getEscena() == EscenaPunto360.URBANISMO;
+        boolean esPlano = dto.getEscena() == EscenaPunto360.URBANISMO || dto.getEscena() == EscenaPunto360.ZONAS;
 
         if (esPlano && (dto.getPosX() == null || dto.getPosY() == null)) {
-            throw new IllegalArgumentException("Un punto del plano de urbanismo necesita posX y posY.");
+            throw new IllegalArgumentException("Un punto de una imagen plana necesita posX y posY.");
+        }
+        if (dto.getEscena() == EscenaPunto360.ZONAS && dto.getZonaComunId() == null) {
+            throw new IllegalArgumentException("Un punto de las zonas destacadas necesita la zona común a la que apunta.");
         }
         if (!esPlano && (dto.getYaw() == null || dto.getPitch() == null)) {
             throw new IllegalArgumentException("Un punto de una imagen 360° necesita yaw y pitch.");
@@ -97,10 +105,20 @@ public class Punto360Service {
             }
         }
 
+        ZonaComun zona = null;
+        if (dto.getZonaComunId() != null) {
+            zona = zonaComunRepository.findById(dto.getZonaComunId())
+                    .orElseThrow(() -> new EntityNotFoundException("Zona común no encontrada con ID: " + dto.getZonaComunId()));
+            if (!proyecto.getId().equals(zona.getProyecto().getId())) {
+                throw new IllegalArgumentException("La zona común no pertenece a este proyecto.");
+            }
+        }
+
         punto.setProyecto(proyecto);
         punto.setEscena(dto.getEscena());
         punto.setLote(lote);
         punto.setEtapa(etapa);
+        punto.setZonaComun(zona);
         punto.setEtiqueta(dto.getEtiqueta().trim());
         punto.setYaw(esPlano ? null : dto.getYaw());
         punto.setPitch(esPlano ? null : dto.getPitch());
@@ -109,7 +127,7 @@ public class Punto360Service {
     }
 
     /**
-     * Sin clave foránea en la base, un lote o una etapa borrados dejan su punto huérfano: ese punto se omite
+     * Sin clave foránea en la base, un lote, una etapa o una zona borrados dejan su punto huérfano: ese punto se omite
      * en lugar de romper la lectura pública de todo el proyecto.
      */
     private Punto360ResponseDTO aDTOSiExiste(Punto360 p) {
@@ -123,6 +141,7 @@ public class Punto360Service {
     private Punto360ResponseDTO aDTO(Punto360 p) {
         Lote lote = p.getLote();
         Etapa etapa = p.getEtapa();
+        ZonaComun zona = p.getZonaComun();
         return Punto360ResponseDTO.builder()
                 .id(p.getId())
                 .proyectoId(p.getProyecto().getId())
@@ -134,6 +153,8 @@ public class Punto360Service {
                 .loteEstado(lote != null && lote.getEstado() != null ? lote.getEstado().getNombre() : null)
                 .etapaId(etapa != null ? etapa.getId() : null)
                 .etapaNombre(etapa != null ? etapa.getNombre() : null)
+                .zonaComunId(zona != null ? zona.getId() : null)
+                .zonaComunNombre(zona != null ? zona.getNombre() : null)
                 .yaw(p.getYaw())
                 .pitch(p.getPitch())
                 .posX(p.getPosX())

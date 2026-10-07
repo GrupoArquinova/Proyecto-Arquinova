@@ -7,6 +7,8 @@ import com.constructora_backend.entity.*;
 import com.constructora_backend.mapper.SolicitudContactoMapper;
 import com.constructora_backend.repository.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -124,18 +126,31 @@ public class SolicitudContactoService {
         existente.setEstado(nuevoEstado);
         existente.setObservacionesInternas(dto.getObservacionesInternas());
 
-        if (dto.getAtendidaPorId() != null) {
-            Usuario usuario = usuarioRepository.findById(dto.getAtendidaPorId())
+        // Quien atiende es la persona con la sesión iniciada; el ID del cuerpo solo se usa si no hay sesión
+        // (así nadie puede registrar la atención a nombre de otro usuario).
+        Usuario quienAtiende = usuarioAutenticado();
+        if (quienAtiende == null && dto.getAtendidaPorId() != null) {
+            quienAtiende = usuarioRepository.findById(dto.getAtendidaPorId())
                     .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Usuario no encontrado con ID: " + dto.getAtendidaPorId()));
-            existente.setAtendidaPor(usuario);
+        }
+        if (quienAtiende != null) {
+            existente.setAtendidaPor(quienAtiende);
         }
 
-        if (existente.getAtendidaEn() == null) {
-            existente.setAtendidaEn(LocalDateTime.now());
-        }
+        // Queda registrada la última atención (quién y cuándo)
+        existente.setAtendidaEn(LocalDateTime.now());
 
         SolicitudContacto actualizada = solicitudRepository.save(existente);
         return solicitudMapper.toDTO(actualizada);
+    }
+
+    /** Usuario con la sesión iniciada en esta petición, o null si no hay sesión o no se encuentra en la base de datos. */
+    private Usuario usuarioAutenticado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
+            return null;
+        }
+        return usuarioRepository.findByCorreo(auth.getName()).orElse(null);
     }
 
     @Transactional
