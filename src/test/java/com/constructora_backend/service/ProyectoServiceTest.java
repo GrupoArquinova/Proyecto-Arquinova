@@ -4,6 +4,7 @@ import com.constructora_backend.dto.request.ProyectoRequestDTO;
 import com.constructora_backend.dto.response.ProyectoResponseDTO;
 import com.constructora_backend.entity.Empresa;
 import com.constructora_backend.entity.Proyecto;
+import com.constructora_backend.enums.TipoRegistroProyecto;
 import com.constructora_backend.mapper.ProyectoMapper;
 import com.constructora_backend.repository.EmpresaRepository;
 import com.constructora_backend.repository.ProyectoRepository;
@@ -92,5 +93,43 @@ class ProyectoServiceTest {
         RuntimeException excepcion = assertThrows(RuntimeException.class, () -> proyectoService.guardar(requestDTO));
         assertTrue(excepcion.getMessage().contains("Ya existe un proyecto con el slug"));
         verify(proyectoRepository, never()).save(any());
+    }
+
+    @Test
+    void alDestacarUnProyectoSeLeQuitaElDestacadoAlosDemasDeLaEmpresa() {
+        requestDTO.setDestacado(true);
+        proyecto.setDestacado(true);
+        when(proyectoRepository.existsByEmpresaIdAndSlug(1L, "residencial-el-bosque")).thenReturn(false);
+        when(empresaRepository.findById(1L)).thenReturn(Optional.of(empresa));
+        when(proyectoMapper.toEntity(requestDTO, empresa, null, null)).thenReturn(proyecto);
+        when(proyectoRepository.save(any(Proyecto.class))).thenReturn(proyecto);
+        when(proyectoMapper.toDTO(proyecto)).thenReturn(responseDTO);
+
+        proyectoService.guardar(requestDTO);
+
+        verify(proyectoRepository).quitarDestacadoDeOtros(1L, 10L);
+    }
+
+    @Test
+    void siElProyectoNoEsDestacadoNoSeTocanLosDemas() {
+        proyecto.setDestacado(false);
+        when(proyectoRepository.existsByEmpresaIdAndSlug(1L, "residencial-el-bosque")).thenReturn(false);
+        when(empresaRepository.findById(1L)).thenReturn(Optional.of(empresa));
+        when(proyectoMapper.toEntity(requestDTO, empresa, null, null)).thenReturn(proyecto);
+        when(proyectoRepository.save(any(Proyecto.class))).thenReturn(proyecto);
+        when(proyectoMapper.toDTO(proyecto)).thenReturn(responseDTO);
+
+        proyectoService.guardar(requestDTO);
+
+        verify(proyectoRepository, never()).quitarDestacadoDeOtros(any(), any());
+    }
+
+    @Test
+    void unProyectoNuevoEsOfertaComercialPorDefectoYNoEsDestacado() {
+        assertEquals(TipoRegistroProyecto.OFERTA_COMERCIAL, new Proyecto().getTipoRegistro());
+        assertFalse(new Proyecto().getDestacado());
+        // En la petición no hay valores por defecto: una actualización parcial no debe borrar lo ya guardado
+        assertNull(new ProyectoRequestDTO().getTipoRegistro());
+        assertNull(new ProyectoRequestDTO().getDestacado());
     }
 }

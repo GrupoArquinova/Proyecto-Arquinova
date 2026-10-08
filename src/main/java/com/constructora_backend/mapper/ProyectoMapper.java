@@ -19,6 +19,10 @@ public class ProyectoMapper {
         dto.setSlug(proyecto.getSlug());
         dto.setDescripcion(proyecto.getDescripcion());
         dto.setEstadoProyecto(proyecto.getEstadoProyecto());
+        dto.setTipoRegistro(proyecto.getTipoRegistro());
+        dto.setTipoProyecto(proyecto.getTipoProyecto());
+        dto.setParticipacion(proyecto.getParticipacion());
+        dto.setDestacado(proyecto.getDestacado());
         dto.setPublicado(proyecto.getPublicado());
         dto.setActivo(proyecto.getActivo());
         dto.setFechaLanzamiento(proyecto.getFechaLanzamiento());
@@ -55,6 +59,18 @@ public class ProyectoMapper {
         if (dto.getEstadoProyecto() != null) {
             proyecto.setEstadoProyecto(dto.getEstadoProyecto());
         }
+        if (dto.getTipoRegistro() != null) {
+            proyecto.setTipoRegistro(dto.getTipoRegistro());
+        }
+        if (dto.getTipoProyecto() != null) {
+            proyecto.setTipoProyecto(dto.getTipoProyecto());
+        }
+        if (dto.getParticipacion() != null) {
+            proyecto.setParticipacion(dto.getParticipacion().isBlank() ? null : dto.getParticipacion().trim());
+        }
+        if (dto.getDestacado() != null) {
+            proyecto.setDestacado(dto.getDestacado());
+        }
         if (dto.getPublicado() != null) {
             proyecto.setPublicado(dto.getPublicado());
         }
@@ -78,6 +94,18 @@ public class ProyectoMapper {
         proyecto.setDescripcion(dto.getDescripcion());
         if (dto.getEstadoProyecto() != null) {
             proyecto.setEstadoProyecto(dto.getEstadoProyecto());
+        }
+        if (dto.getTipoRegistro() != null) {
+            proyecto.setTipoRegistro(dto.getTipoRegistro());
+        }
+        if (dto.getTipoProyecto() != null) {
+            proyecto.setTipoProyecto(dto.getTipoProyecto());
+        }
+        if (dto.getParticipacion() != null) {
+            proyecto.setParticipacion(dto.getParticipacion().isBlank() ? null : dto.getParticipacion().trim());
+        }
+        if (dto.getDestacado() != null) {
+            proyecto.setDestacado(dto.getDestacado());
         }
         if (dto.getPublicado() != null) {
             proyecto.setPublicado(dto.getPublicado());

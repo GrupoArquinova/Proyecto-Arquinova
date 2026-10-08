@@ -1,8 +1,12 @@
 package com.constructora_backend.entity;
 
 import com.constructora_backend.enums.EstadoProyecto;
+import com.constructora_backend.enums.TipoProyecto;
+import com.constructora_backend.enums.TipoRegistroProyecto;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -31,9 +35,29 @@ public class Proyecto {
     @Column(columnDefinition = "TEXT")
     private String descripcion;
 
+    // Texto (VARCHAR) y no ENUM de MySQL: así agregar un valor al enum de Java no exige alterar la tabla
     @Enumerated(EnumType.STRING)
-    @Column(name = "estado_proyecto", nullable = false)
-    private EstadoProyecto estadoProyecto = EstadoProyecto.PLANIFICACION;
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "estado_proyecto", nullable = false, length = 30)
+    private EstadoProyecto estadoProyecto = EstadoProyecto.EN_DISENO;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "tipo_registro", nullable = false, length = 20)
+    private TipoRegistroProyecto tipoRegistro = TipoRegistroProyecto.OFERTA_COMERCIAL;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "tipo_proyecto", length = 20)
+    private TipoProyecto tipoProyecto;
+
+    /** Papel de Arquinova en el proyecto (diseño, estudios, licencias, estructuración, construcción, comercialización). */
+    @Column(length = 255)
+    private String participacion;
+
+    /** Proyecto que se destaca en el inicio. Solo uno por empresa. */
+    @Column(nullable = false)
+    private Boolean destacado = false;
 
     @Column(nullable = false)
     private Boolean publicado = false;
