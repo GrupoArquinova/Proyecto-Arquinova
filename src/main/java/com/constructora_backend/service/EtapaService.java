@@ -6,6 +6,7 @@ import com.constructora_backend.entity.Etapa;
 import com.constructora_backend.entity.Proyecto;
 import com.constructora_backend.mapper.EtapaMapper;
 import com.constructora_backend.repository.EtapaRepository;
+import com.constructora_backend.repository.LoteRepository;
 import com.constructora_backend.repository.ProyectoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,9 @@ public class EtapaService {
 
     @Autowired
     private ProyectoRepository proyectoRepository;
+
+    @Autowired
+    private LoteRepository loteRepository;
 
     @Autowired
     private EtapaMapper etapaMapper;
@@ -102,6 +106,12 @@ public class EtapaService {
     public void eliminar(Long id) {
         if (!etapaRepository.existsById(id)) {
             throw new RuntimeException("Etapa no encontrada con ID: " + id);
+        }
+        long lotes = loteRepository.countByEtapaId(id);
+        if (lotes > 0) {
+            throw new com.constructora_backend.exception.DuplicateResourceException(
+                    "No se puede eliminar la etapa: tiene " + lotes + (lotes == 1 ? " lote" : " lotes")
+                            + ". Elimina o mueve primero esos lotes, o desactiva la etapa.");
         }
         etapaRepository.deleteById(id);
     }

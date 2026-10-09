@@ -70,11 +70,11 @@ class SolicitudContactoServiceTest {
 
         estadoNueva = new EstadoSolicitud();
         estadoNueva.setId(1);
-        estadoNueva.setNombre("NUEVA");
+        estadoNueva.setNombre("NUEVO");
 
         estadoAtendida = new EstadoSolicitud();
         estadoAtendida.setId(2);
-        estadoAtendida.setNombre("CONTACTADA");
+        estadoAtendida.setNombre("EN_GESTION");
 
         solicitud = new SolicitudContacto();
         solicitud.setId(10L);
@@ -86,12 +86,12 @@ class SolicitudContactoServiceTest {
         responseDTO.setId(10L);
         responseDTO.setNombre("Carlos Pérez");
         responseDTO.setEstadoId(1);
-        responseDTO.setEstadoNombre("NUEVA");
+        responseDTO.setEstadoNombre("NUEVO");
     }
 
     @Test
     void crearPublicaExitosamente() {
-        when(estadoSolicitudRepository.findById(1)).thenReturn(Optional.of(estadoNueva));
+        when(estadoSolicitudRepository.findFirstByNombreIgnoreCase("NUEVO")).thenReturn(Optional.of(estadoNueva));
         when(solicitudMapper.toEntity(publicDTO, estadoNueva, null, null)).thenReturn(solicitud);
         when(solicitudRepository.save(any(SolicitudContacto.class))).thenReturn(solicitud);
         when(solicitudMapper.toDTO(solicitud)).thenReturn(responseDTO);

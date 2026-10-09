@@ -35,6 +35,9 @@ public class Proyecto {
     @Column(columnDefinition = "TEXT")
     private String descripcion;
 
+    @Column(name = "descripcion_en", columnDefinition = "TEXT")
+    private String descripcionEn;
+
     // Texto (VARCHAR) y no ENUM de MySQL: así agregar un valor al enum de Java no exige alterar la tabla
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
@@ -54,6 +57,9 @@ public class Proyecto {
     /** Papel de Arquinova en el proyecto (diseño, estudios, licencias, estructuración, construcción, comercialización). */
     @Column(length = 255)
     private String participacion;
+
+    @Column(name = "participacion_en", length = 255)
+    private String participacionEn;
 
     /** Proyecto que se destaca en el inicio. Solo uno por empresa. */
     @Column(nullable = false)

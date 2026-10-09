@@ -22,6 +22,7 @@ public class MultimediaService {
     private final LoteRepository loteRepository;
     private final ZonaComunRepository zonaComunRepository;
     private final CasaModeloRepository casaModeloRepository;
+    private final EtapaRepository etapaRepository;
     private final UsuarioRepository usuarioRepository;
 
     @Transactional(readOnly = true)
@@ -54,6 +55,11 @@ public class MultimediaService {
                 .orElseThrow(() -> new EntityNotFoundException("Casa modelo no encontrada con ID: " + dto.getCasaModeloId()))
                 : null;
 
+        Etapa etapa = dto.getEtapaId() != null
+                ? etapaRepository.findById(dto.getEtapaId())
+                .orElseThrow(() -> new EntityNotFoundException("Etapa no encontrada con ID: " + dto.getEtapaId()))
+                : null;
+
         Usuario usuario = obtenerUsuarioAutenticado();
 
         Multimedia multimedia = Multimedia.builder()
@@ -61,6 +67,7 @@ public class MultimediaService {
                 .lote(lote)
                 .zonaComun(zonaComun)
                 .casaModelo(casaModelo)
+                .etapa(etapa)
                 .tipo(dto.getTipo())
                 .titulo(dto.getTitulo())
                 .descripcion(dto.getDescripcion())
@@ -101,6 +108,9 @@ public class MultimediaService {
             case "casamodelo", "casa_modelo" -> soloPublicados
                     ? multimediaRepository.findByCasaModelo_IdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(entidadId)
                     : multimediaRepository.findByCasaModelo_IdAndActivoTrueOrderByOrdenAsc(entidadId);
+            case "etapa" -> soloPublicados
+                    ? multimediaRepository.findByEtapa_IdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(entidadId)
+                    : multimediaRepository.findByEtapa_IdAndActivoTrueOrderByOrdenAsc(entidadId);
             default -> throw new IllegalArgumentException("Tipo de entidad no soportado: " + tipoEntidad);
         };
 
@@ -148,9 +158,10 @@ public class MultimediaService {
         if (dto.getLoteId() != null) count++;
         if (dto.getZonaComunId() != null) count++;
         if (dto.getCasaModeloId() != null) count++;
+        if (dto.getEtapaId() != null) count++;
 
         if (count != 1) {
-            throw new IllegalArgumentException("Debe asociar el archivo multimedia exactamente a una entidad padre (Proyecto, Lote, Zona Común o Casa Modelo).");
+            throw new IllegalArgumentException("Debe asociar el archivo multimedia exactamente a una entidad padre (Proyecto, Lote, Zona Común, Casa Modelo o Etapa).");
         }
     }
 
@@ -165,6 +176,8 @@ public class MultimediaService {
                 .zonaComunNombre(entity.getZonaComun() != null ? entity.getZonaComun().getNombre() : null)
                 .casaModeloId(entity.getCasaModelo() != null ? entity.getCasaModelo().getId() : null)
                 .casaModeloNombre(entity.getCasaModelo() != null ? entity.getCasaModelo().getNombre() : null)
+                .etapaId(entity.getEtapa() != null ? entity.getEtapa().getId() : null)
+                .etapaNombre(entity.getEtapa() != null ? entity.getEtapa().getNombre() : null)
                 .tipo(entity.getTipo())
                 .titulo(entity.getTitulo())
                 .descripcion(entity.getDescripcion())

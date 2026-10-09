@@ -22,9 +22,15 @@ public class ZonaComunResponseDTO {
     
     @Schema(description = "Nombre de la zona común", example = "Piscina y zonas húmedas")
     private String nombre;
+
+    /** Texto en inglés para el sitio público (opcional). */
+    private String nombreEn;
     
     @Schema(description = "Descripción detallada", example = "Amplia piscina para adultos y niños con calefacción.")
     private String descripcion;
+
+    /** Texto en inglés para el sitio público (opcional). */
+    private String descripcionEn;
     
     @Schema(description = "Estado de publicación", example = "true")
     private Boolean publicado;

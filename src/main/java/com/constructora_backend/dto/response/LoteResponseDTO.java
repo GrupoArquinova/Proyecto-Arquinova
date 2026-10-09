@@ -47,6 +47,9 @@ public class LoteResponseDTO {
     @Schema(description = "Descripción del lote")
     private String descripcion;
 
+    /** Texto en inglés para el sitio público (opcional). */
+    private String descripcionEn;
+
     @Schema(description = "Características")
     private String caracteristicas;
 

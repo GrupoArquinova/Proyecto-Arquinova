@@ -31,6 +31,9 @@ public class ProyectoResponseDTO {
     @Schema(description = "Descripción detallada del proyecto", example = "Exclusivo proyecto de lotes y casas campestres.")
     private String descripcion;
 
+    /** Texto en inglés para el sitio público (opcional). */
+    private String descripcionEn;
+
     @Schema(description = "Etapa del proyecto", example = "EN_DISENO")
     private EstadoProyecto estadoProyecto;
 
@@ -42,6 +45,9 @@ public class ProyectoResponseDTO {
 
     @Schema(description = "Papel de Arquinova en el proyecto", example = "Diseño arquitectónico y gestión de licencias")
     private String participacion;
+
+    /** Texto en inglés para el sitio público (opcional). */
+    private String participacionEn;
 
     @Schema(description = "Si es el proyecto destacado del inicio", example = "false")
     private Boolean destacado;

@@ -18,6 +18,7 @@ public class UbicacionMapper {
         dto.setCiudad(ubicacion.getCiudad());
         dto.setDepartamento(ubicacion.getDepartamento());
         dto.setReferencias(ubicacion.getReferencias());
+        dto.setReferenciasEn(ubicacion.getReferenciasEn());
         dto.setLatitud(ubicacion.getLatitud());
         dto.setLongitud(ubicacion.getLongitud());
         dto.setGoogleMapsUrl(ubicacion.getGoogleMapsUrl());
@@ -45,6 +46,7 @@ public class UbicacionMapper {
         ubicacion.setCiudad(dto.getCiudad());
         ubicacion.setDepartamento(dto.getDepartamento());
         ubicacion.setReferencias(dto.getReferencias());
+        if (dto.getReferenciasEn() != null) ubicacion.setReferenciasEn(TextoOpcional.limpiar(dto.getReferenciasEn()));
         ubicacion.setLatitud(dto.getLatitud());
         ubicacion.setLongitud(dto.getLongitud());
         ubicacion.setGoogleMapsUrl(dto.getGoogleMapsUrl());
@@ -64,6 +66,7 @@ public class UbicacionMapper {
         ubicacion.setCiudad(dto.getCiudad());
         ubicacion.setDepartamento(dto.getDepartamento());
         ubicacion.setReferencias(dto.getReferencias());
+        if (dto.getReferenciasEn() != null) ubicacion.setReferenciasEn(TextoOpcional.limpiar(dto.getReferenciasEn()));
         ubicacion.setLatitud(dto.getLatitud());
         ubicacion.setLongitud(dto.getLongitud());
         ubicacion.setGoogleMapsUrl(dto.getGoogleMapsUrl());

@@ -31,6 +31,9 @@ public class UbicacionResponseDTO {
     @Schema(description = "Puntos de referencia de llegada", example = "A 500 metros después del Club Campestre")
     private String referencias;
 
+    /** Texto en inglés para el sitio público (opcional). */
+    private String referenciasEn;
+
     @Schema(description = "Latitud geográfica", example = "4.5388890")
     private BigDecimal latitud;
 

@@ -19,6 +19,8 @@ public class SolicitudContactoMapper {
         dto.setNombre(entidad.getNombre());
         dto.setCorreo(entidad.getCorreo());
         dto.setTelefono(entidad.getTelefono());
+        dto.setServicioInteres(entidad.getServicioInteres());
+        dto.setIdioma(entidad.getIdioma());
         dto.setMensaje(entidad.getMensaje());
         dto.setConsentimientoDatos(entidad.getCosentimientoDatos());
         dto.setIp(entidad.getIp());
@@ -59,13 +61,22 @@ public class SolicitudContactoMapper {
         entidad.setProyecto(proyecto);
         entidad.setLote(lote);
         entidad.setNombre(dto.getNombre().trim());
-        entidad.setCorreo(dto.getCorreo().trim().toLowerCase());
-        entidad.setTelefono(dto.getTelefono().trim());
+        entidad.setCorreo(limpiar(dto.getCorreo()) == null ? null : limpiar(dto.getCorreo()).toLowerCase());
+        entidad.setTelefono(limpiar(dto.getTelefono()));
+        entidad.setServicioInteres(limpiar(dto.getServicioInteres()));
+        entidad.setIdioma(dto.getIdioma() != null ? dto.getIdioma() : "es");
         entidad.setMensaje(dto.getMensaje());
         entidad.setCosentimientoDatos(dto.getConsentimientoDatos());
         entidad.setIp(dto.getIp());
         entidad.setUserAgent(dto.getUserAgent());
 
         return entidad;
+    }
+
+    /** Texto sin espacios sobrantes; un texto vacío se guarda como null. */
+    private static String limpiar(String texto) {
+        if (texto == null) return null;
+        String limpio = texto.trim();
+        return limpio.isEmpty() ? null : limpio;
     }
 }

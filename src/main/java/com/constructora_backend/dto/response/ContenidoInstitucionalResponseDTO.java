@@ -24,8 +24,14 @@ public class ContenidoInstitucionalResponseDTO {
     @Schema(description = "Título descriptivo del contenido", example = "Nuestra Misión")
     private String titulo;
 
+    /** Texto en inglés para el sitio público (opcional). */
+    private String tituloEn;
+
     @Schema(description = "Contenido completo de la sección")
     private String contenido;
+
+    /** Texto en inglés para el sitio público (opcional). */
+    private String contenidoEn;
 
     @Schema(description = "Estado de publicación", example = "true")
     private Boolean publicado;

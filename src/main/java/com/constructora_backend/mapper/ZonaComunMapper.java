@@ -22,7 +22,9 @@ public class ZonaComunMapper {
         ZonaComunResponseDTO dto = new ZonaComunResponseDTO();
         dto.setId(zona.getId());
         dto.setNombre(zona.getNombre());
+        dto.setNombreEn(zona.getNombreEn());
         dto.setDescripcion(zona.getDescripcion());
+        dto.setDescripcionEn(zona.getDescripcionEn());
         dto.setPublicado(zona.getPublicado());
         dto.setActivo(zona.getActivo());
         dto.setCreadoEn(zona.getCreadoEn());
@@ -60,7 +62,9 @@ public class ZonaComunMapper {
         ZonaComun zona = new ZonaComun();
         zona.setProyecto(proyecto);
         zona.setNombre(dto.getNombre());
+        if (dto.getNombreEn() != null) zona.setNombreEn(TextoOpcional.limpiar(dto.getNombreEn()));
         zona.setDescripcion(dto.getDescripcion());
+        if (dto.getDescripcionEn() != null) zona.setDescripcionEn(TextoOpcional.limpiar(dto.getDescripcionEn()));
         if (dto.getPublicado() != null) zona.setPublicado(dto.getPublicado());
         if (dto.getActivo() != null) zona.setActivo(dto.getActivo());
 
@@ -72,7 +76,9 @@ public class ZonaComunMapper {
 
         zona.setProyecto(proyecto);
         zona.setNombre(dto.getNombre());
+        if (dto.getNombreEn() != null) zona.setNombreEn(TextoOpcional.limpiar(dto.getNombreEn()));
         zona.setDescripcion(dto.getDescripcion());
+        if (dto.getDescripcionEn() != null) zona.setDescripcionEn(TextoOpcional.limpiar(dto.getDescripcionEn()));
         if (dto.getPublicado() != null) zona.setPublicado(dto.getPublicado());
         if (dto.getActivo() != null) zona.setActivo(dto.getActivo());
     }

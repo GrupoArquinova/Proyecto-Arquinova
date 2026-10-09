@@ -43,6 +43,9 @@ public class Lote {
     @Column(columnDefinition = "TEXT")
     private String descripcion;
 
+    @Column(name = "descripcion_en", columnDefinition = "TEXT")
+    private String descripcionEn;
+
     @Column(columnDefinition = "TEXT")
     private String caracteristicas;
 

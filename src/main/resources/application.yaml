@@ -156,3 +156,13 @@ resilience4j:
         permitted-number-of-calls-in-half-open-state: 2
         automatic-transition-from-open-to-half-open-enabled: true
 
+# ─── Contacto web ────────────────────────────────────────────────────────────
+app:
+  # Dirección pública del sitio (por ejemplo https://www.midominio.com). Si se deja vacía, los correos no llevan enlaces al sitio.
+  sitio-url: ${APP_SITIO_URL:}
+  contacto:
+    # Correo de la empresa que recibe el aviso de cada solicitud nueva
+    correo-aviso: ${APP_CONTACTO_CORREO_AVISO:grupoarquinova1@gmail.com}
+    # Confirmación automática al cliente que deja su correo (false para apagarla)
+    confirmacion-activa: ${APP_CONTACTO_CONFIRMACION_ACTIVA:true}
+    whatsapp: ${APP_CONTACTO_WHATSAPP:+57 316 865 3715}

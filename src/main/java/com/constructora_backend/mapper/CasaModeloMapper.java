@@ -16,6 +16,7 @@ public class CasaModeloMapper {
         dto.setId(casa.getId());
         dto.setNombre(casa.getNombre());
         dto.setDescripcion(casa.getDescripcion());
+        dto.setDescripcionEn(casa.getDescripcionEn());
         dto.setAreaConstruidaM2(casa.getAreaConstruidaM2());
         dto.setNumeroHabitaciones(casa.getNumeroHabitaciones());
         dto.setNumeroBanos(casa.getNumeroBanos());
@@ -41,6 +42,7 @@ public class CasaModeloMapper {
         casa.setProyecto(proyecto);
         casa.setNombre(dto.getNombre());
         casa.setDescripcion(dto.getDescripcion());
+        if (dto.getDescripcionEn() != null) casa.setDescripcionEn(TextoOpcional.limpiar(dto.getDescripcionEn()));
         casa.setAreaConstruidaM2(dto.getAreaConstruidaM2());
         casa.setNumeroHabitaciones(dto.getNumeroHabitaciones());
         casa.setNumeroBanos(dto.getNumeroBanos());
@@ -59,6 +61,7 @@ public class CasaModeloMapper {
         casa.setProyecto(proyecto);
         casa.setNombre(dto.getNombre());
         casa.setDescripcion(dto.getDescripcion());
+        if (dto.getDescripcionEn() != null) casa.setDescripcionEn(TextoOpcional.limpiar(dto.getDescripcionEn()));
         casa.setAreaConstruidaM2(dto.getAreaConstruidaM2());
         casa.setNumeroHabitaciones(dto.getNumeroHabitaciones());
         casa.setNumeroBanos(dto.getNumeroBanos());

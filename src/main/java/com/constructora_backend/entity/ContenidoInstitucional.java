@@ -26,8 +26,14 @@ public class ContenidoInstitucional {
     @Column(length = 200)
     private String titulo;
 
+    @Column(name = "titulo_en", length = 200)
+    private String tituloEn;
+
     @Column(columnDefinition = "TEXT")
     private String contenido;
+
+    @Column(name = "contenido_en", columnDefinition = "TEXT")
+    private String contenidoEn;
 
     @Column(nullable = false)
     @Builder.Default

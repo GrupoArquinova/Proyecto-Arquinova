@@ -32,7 +32,7 @@ public class ReporteService {
         long lotesVendidos = ((Number) entityManager.createQuery("SELECT COUNT(l) FROM Lote l WHERE l.activo = true AND UPPER(l.estado.nombre) = 'VENDIDO'").getSingleResult()).longValue();
 
         long totalSolicitudes = ((Number) entityManager.createQuery("SELECT COUNT(s) FROM SolicitudContacto s").getSingleResult()).longValue();
-        long solicitudesNuevas = ((Number) entityManager.createQuery("SELECT COUNT(s) FROM SolicitudContacto s WHERE UPPER(s.estado.nombre) = 'NUEVA'").getSingleResult()).longValue();
+        long solicitudesNuevas = ((Number) entityManager.createQuery("SELECT COUNT(s) FROM SolicitudContacto s WHERE UPPER(s.estado.nombre) IN ('NUEVA', 'NUEVO')").getSingleResult()).longValue();
 
         @SuppressWarnings("unchecked")
         List<Object[]> rawLotesEstados = entityManager.createQuery(
@@ -210,7 +210,7 @@ public class ReporteService {
     public List<ReporteSolicitudItemDTO> consultarReporteSolicitudes(FiltroReporteDTO filtro) {
         StringBuilder jpql = new StringBuilder(
                 "SELECT new com.constructora_backend.dto.ReporteSolicitudItemDTO(" +
-                        "s.id, COALESCE(p.nombre, 'General'), COALESCE(l.codigo, 'N/A'), s.nombre, s.correo, s.telefono, " +
+                        "s.id, COALESCE(p.nombre, 'General'), COALESCE(l.codigo, 'N/A'), s.nombre, COALESCE(s.correo, 'No indicó'), COALESCE(s.telefono, 'No indicó'), " +
                         "est.nombre, COALESCE(u.nombreCompleto, 'Sin Atender'), s.creadoEn) " +
                         "FROM SolicitudContacto s " +
                         "LEFT JOIN s.proyecto p " +

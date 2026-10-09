@@ -22,7 +22,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SolicitudContactoService {
 
-    private static final Integer ESTADO_NUEVA = 1;
+    /** Estado con el que entra toda solicitud nueva (se busca por nombre, no por número). */
+    private static final String ESTADO_NUEVO = "NUEVO";
 
     @Autowired
     private SolicitudContactoRepository solicitudRepository;
@@ -77,8 +78,8 @@ public class SolicitudContactoService {
 
     @Transactional
     public SolicitudContactoResponseDTO crearPublica(SolicitudContactoPublicDTO dto){
-        EstadoSolicitud estadoInicial = estadoSolicitudRepository.findById(ESTADO_NUEVA)
-                .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Estado de solicitud 'NUEVA' no encontrado con ID: " + ESTADO_NUEVA));
+        EstadoSolicitud estadoInicial = estadoSolicitudRepository.findFirstByNombreIgnoreCase(ESTADO_NUEVO)
+                .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Estado de solicitud '" + ESTADO_NUEVO + "' no encontrado"));
 
         Proyecto proyecto = null;
         if (dto.getProyectoId() != null){
@@ -104,12 +105,24 @@ public class SolicitudContactoService {
                     guardada.getTelefono(),
                     guardada.getCorreo(),
                     nombreProyectoStr,
-                    dto.getMensaje()
+                    guardada.getServicioInteres(),
+                    dto.getMensaje(),
+                    guardada.getIdioma()
             );
             log.info("Notificación de correo disparada exitosamente para la solicitud ID: {}", guardada.getId());
         } catch (Exception ex) {
             // Se captura la excepción para evitar que un fallo en el servidor SMTP o broker interrumpa el registro principal en BD
             log.error("La solicitud se guardó correctamente en BD, pero ocurrió un fallo al enviar la notificación por correo: {}", ex.getMessage());
+        }
+
+        // 3. Confirmación al cliente (solo si dejó correo); un fallo aquí tampoco afecta el registro
+        if (guardada.getCorreo() != null && !guardada.getCorreo().isBlank()) {
+            try {
+                emailService.enviarConfirmacionSolicitud(guardada.getNombre(), guardada.getCorreo(),
+                        proyecto != null ? proyecto.getNombre() : null, guardada.getIdioma());
+            } catch (Exception ex) {
+                log.error("La solicitud se guardó, pero no se pudo disparar la confirmación al cliente: {}", ex.getMessage());
+            }
         }
 
         return solicitudMapper.toDTO(guardada);

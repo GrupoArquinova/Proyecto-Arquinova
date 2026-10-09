@@ -14,6 +14,7 @@ public class MultimediaRequestDTO {
     private Long loteId;
     private Long zonaComunId;
     private Long casaModeloId;
+    private Long etapaId;
 
     @NotNull(message = "El tipo de multimedia es obligatorio")
     private TipoMultimedia tipo;

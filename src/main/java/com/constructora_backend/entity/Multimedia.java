@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_multimedia_lote", columnList = "lote_id, orden"),
                 @Index(name = "idx_multimedia_zona", columnList = "zona_comun_id, orden"),
                 @Index(name = "idx_multimedia_casa", columnList = "casa_modelo_id, orden"),
+                @Index(name = "idx_multimedia_etapa", columnList = "etapa_id, orden"),
                 @Index(name = "idx_multimedia_publicado", columnList = "publicado, activo")
 
         })
@@ -46,6 +47,10 @@ public class Multimedia {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "casa_modelo_id", foreignKey = @ForeignKey(name = "fk_multimedia_casa"))
     private CasaModelo casaModelo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "etapa_id", foreignKey = @ForeignKey(name = "fk_multimedia_etapa"))
+    private Etapa etapa;
 
     // Texto (VARCHAR) y no ENUM de MySQL: así agregar un tipo nuevo al enum de Java no exige alterar la tabla
     @Enumerated(EnumType.STRING)
@@ -107,9 +112,10 @@ public class Multimedia {
         if (lote != null) count++;
         if (zonaComun != null) count++;
         if (casaModelo != null) count++;
+        if (etapa != null) count++;
 
         if (count != 1) {
-            throw new IllegalArgumentException("El archivo multimedia debe estar asociado exactamente a una entidad padre (Proyecto, Lote, Zona comun o casa Modelo).");
+            throw new IllegalArgumentException("El archivo multimedia debe estar asociado exactamente a una entidad padre (Proyecto, Lote, Zona comun, Casa Modelo o Etapa).");
         }
 
         if (tamanoBytes != null && tamanoBytes < 0) {

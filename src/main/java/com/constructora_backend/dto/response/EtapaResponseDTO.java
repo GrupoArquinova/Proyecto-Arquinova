@@ -21,9 +21,15 @@ public class EtapaResponseDTO {
     
     @Schema(description = "Nombre de la etapa", example = "Etapa 1 - El Roble")
     private String nombre;
+
+    /** Texto en inglés para el sitio público (opcional). */
+    private String nombreEn;
     
     @Schema(description = "Descripción de la etapa", example = "Primera fase de entrega con lotes totalmente urbanizados.")
     private String descripcion;
+
+    /** Texto en inglés para el sitio público (opcional). */
+    private String descripcionEn;
     
     @Schema(description = "Orden de visualización", example = "1")
     private Short orden;

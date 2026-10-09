@@ -18,10 +18,12 @@ public class ProyectoMapper {
         dto.setNombre(proyecto.getNombre());
         dto.setSlug(proyecto.getSlug());
         dto.setDescripcion(proyecto.getDescripcion());
+        dto.setDescripcionEn(proyecto.getDescripcionEn());
         dto.setEstadoProyecto(proyecto.getEstadoProyecto());
         dto.setTipoRegistro(proyecto.getTipoRegistro());
         dto.setTipoProyecto(proyecto.getTipoProyecto());
         dto.setParticipacion(proyecto.getParticipacion());
+        dto.setParticipacionEn(proyecto.getParticipacionEn());
         dto.setDestacado(proyecto.getDestacado());
         dto.setPublicado(proyecto.getPublicado());
         dto.setActivo(proyecto.getActivo());
@@ -56,6 +58,7 @@ public class ProyectoMapper {
         proyecto.setNombre(dto.getNombre());
         proyecto.setSlug(dto.getSlug().toLowerCase().trim());
         proyecto.setDescripcion(dto.getDescripcion());
+        if (dto.getDescripcionEn() != null) proyecto.setDescripcionEn(TextoOpcional.limpiar(dto.getDescripcionEn()));
         if (dto.getEstadoProyecto() != null) {
             proyecto.setEstadoProyecto(dto.getEstadoProyecto());
         }
@@ -65,6 +68,7 @@ public class ProyectoMapper {
         if (dto.getTipoProyecto() != null) {
             proyecto.setTipoProyecto(dto.getTipoProyecto());
         }
+        if (dto.getParticipacionEn() != null) proyecto.setParticipacionEn(TextoOpcional.limpiar(dto.getParticipacionEn()));
         if (dto.getParticipacion() != null) {
             proyecto.setParticipacion(dto.getParticipacion().isBlank() ? null : dto.getParticipacion().trim());
         }
@@ -92,6 +96,7 @@ public class ProyectoMapper {
         proyecto.setNombre(dto.getNombre());
         proyecto.setSlug(dto.getSlug().toLowerCase().trim());
         proyecto.setDescripcion(dto.getDescripcion());
+        if (dto.getDescripcionEn() != null) proyecto.setDescripcionEn(TextoOpcional.limpiar(dto.getDescripcionEn()));
         if (dto.getEstadoProyecto() != null) {
             proyecto.setEstadoProyecto(dto.getEstadoProyecto());
         }
@@ -101,6 +106,7 @@ public class ProyectoMapper {
         if (dto.getTipoProyecto() != null) {
             proyecto.setTipoProyecto(dto.getTipoProyecto());
         }
+        if (dto.getParticipacionEn() != null) proyecto.setParticipacionEn(TextoOpcional.limpiar(dto.getParticipacionEn()));
         if (dto.getParticipacion() != null) {
             proyecto.setParticipacion(dto.getParticipacion().isBlank() ? null : dto.getParticipacion().trim());
         }

@@ -14,10 +14,12 @@ public interface MultimediaRepository extends JpaRepository<Multimedia, Long> {
     List<Multimedia> findByLoteIdAndActivoTrueOrderByOrdenAsc(Long loteId);
     List<Multimedia> findByZonaComunIdAndActivoTrueOrderByOrdenAsc(Long zonaComunId);
     List<Multimedia> findByCasaModelo_IdAndActivoTrueOrderByOrdenAsc(Long casaModeloId);
+    List<Multimedia> findByEtapa_IdAndActivoTrueOrderByOrdenAsc(Long etapaId);
 
     List<Multimedia> findByProyectoIdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(Long proyectoId);
     List<Multimedia> findByLoteIdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(Long loteId);
     List<Multimedia> findByZonaComunIdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(Long zonaComunId);
     List<Multimedia> findByCasaModelo_IdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(Long casaModeloId);
+    List<Multimedia> findByEtapa_IdAndPublicadoTrueAndActivoTrueOrderByOrdenAsc(Long etapaId);
     List<Multimedia> findByActivoTrue(); // O retornar List<Multimedia>
 }
