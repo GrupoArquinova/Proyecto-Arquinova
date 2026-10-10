@@ -19,7 +19,7 @@ public class Punto360RequestDTO {
     private Long proyectoId;
 
     @NotNull(message = "La escena es obligatoria")
-    @Schema(description = "ENTORNO, AEREA o URBANISMO", example = "ENTORNO")
+    @Schema(description = "ENTORNO, AEREA, URBANISMO o ZONAS", example = "ENTORNO")
     private EscenaPunto360 escena;
 
     @Schema(description = "Lote al que apunta el botón (ENTORNO y AEREA)")
@@ -27,6 +27,9 @@ public class Punto360RequestDTO {
 
     @Schema(description = "Etapa a la que apunta el botón (URBANISMO)")
     private Long etapaId;
+
+    @Schema(description = "Zona común a la que apunta el botón (ZONAS)")
+    private Long zonaComunId;
 
     @NotBlank(message = "La etiqueta es obligatoria")
     @Size(max = 120, message = "La etiqueta no puede superar los 120 caracteres")

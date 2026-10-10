@@ -32,6 +32,9 @@ public class UbicacionRequestDTO {
     @Schema(description = "Puntos de referencia o indicaciones adicionales de llegada", example = "A 500 metros después del Club Campestre, costado oriental.")
     private String referencias;
 
+    /** Texto en inglés para el sitio público (opcional). */
+    private String referenciasEn;
+
     @DecimalMin(value = "-90.0", message = "La latitud debe ser mayor o igual a -90")
     @DecimalMax(value = "90.0", message = "La latitud debe ser menor o igual a 90")
     @Schema(description = "Latitud geográfica en grados decimales (-90 a 90)", example = "4.5388890")

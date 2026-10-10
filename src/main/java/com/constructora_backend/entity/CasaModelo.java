@@ -31,6 +31,9 @@ public class CasaModelo {
     @Column(columnDefinition = "TEXT")
     private String descripcion;
 
+    @Column(name = "descripcion_en", columnDefinition = "TEXT")
+    private String descripcionEn;
+
     @Column(name = "area_construida_m2", precision = 10, scale = 2)
     private BigDecimal areaConstruidaM2;
 

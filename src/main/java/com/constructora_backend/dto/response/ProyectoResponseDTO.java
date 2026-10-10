@@ -1,6 +1,8 @@
 package com.constructora_backend.dto.response;
 
 import com.constructora_backend.enums.EstadoProyecto;
+import com.constructora_backend.enums.TipoProyecto;
+import com.constructora_backend.enums.TipoRegistroProyecto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -29,8 +31,26 @@ public class ProyectoResponseDTO {
     @Schema(description = "Descripción detallada del proyecto", example = "Exclusivo proyecto de lotes y casas campestres.")
     private String descripcion;
 
-    @Schema(description = "Estado actual del proyecto", example = "PLANIFICACION")
+    /** Texto en inglés para el sitio público (opcional). */
+    private String descripcionEn;
+
+    @Schema(description = "Etapa del proyecto", example = "EN_DISENO")
     private EstadoProyecto estadoProyecto;
+
+    @Schema(description = "Caso de portafolio u oferta comercial", example = "OFERTA_COMERCIAL")
+    private TipoRegistroProyecto tipoRegistro;
+
+    @Schema(description = "Tipo de proyecto", example = "RURAL")
+    private TipoProyecto tipoProyecto;
+
+    @Schema(description = "Papel de Arquinova en el proyecto", example = "Diseño arquitectónico y gestión de licencias")
+    private String participacion;
+
+    /** Texto en inglés para el sitio público (opcional). */
+    private String participacionEn;
+
+    @Schema(description = "Si es el proyecto destacado del inicio", example = "false")
+    private Boolean destacado;
 
     @Schema(description = "Indica si el proyecto está publicado", example = "true")
     private Boolean publicado;

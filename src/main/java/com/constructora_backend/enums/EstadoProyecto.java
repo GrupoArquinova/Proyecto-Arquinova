@@ -1,9 +1,10 @@
 package com.constructora_backend.enums;
 
+/** Etapa del proyecto. Describe el avance; no acredita por sí sola permisos ni disponibilidad. */
 public enum EstadoProyecto {
 
-    PLANIFICACION,
+    EN_DISENO,
+    EN_TRAMITE,
     EN_CONSTRUCCION,
-    ENTREGADO,
     FINALIZADO
 }

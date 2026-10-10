@@ -20,6 +20,7 @@ public class LoteMapper {
         dto.setNombre(lote.getNombre());
         dto.setAreaM2(lote.getAreaM2());
         dto.setDescripcion(lote.getDescripcion());
+        dto.setDescripcionEn(lote.getDescripcionEn());
         dto.setCaracteristicas(lote.getCaracteristicas());
         dto.setPosicionX(lote.getPosicionX());
         dto.setPosicionY(lote.getPosicionY());
@@ -67,6 +68,7 @@ public class LoteMapper {
         lote.setNombre(dto.getNombre());
         lote.setAreaM2(dto.getAreaM2());
         lote.setDescripcion(dto.getDescripcion());
+        if (dto.getDescripcionEn() != null) lote.setDescripcionEn(TextoOpcional.limpiar(dto.getDescripcionEn()));
         lote.setCaracteristicas(dto.getCaracteristicas());
         lote.setPosicionX(dto.getPosicionX());
         lote.setPosicionY(dto.getPosicionY());
@@ -87,6 +89,7 @@ public class LoteMapper {
         lote.setNombre(dto.getNombre());
         lote.setAreaM2(dto.getAreaM2());
         lote.setDescripcion(dto.getDescripcion());
+        if (dto.getDescripcionEn() != null) lote.setDescripcionEn(TextoOpcional.limpiar(dto.getDescripcionEn()));
         lote.setCaracteristicas(dto.getCaracteristicas());
         lote.setPosicionX(dto.getPosicionX());
         lote.setPosicionY(dto.getPosicionY());

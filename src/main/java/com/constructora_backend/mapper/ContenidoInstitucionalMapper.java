@@ -17,7 +17,9 @@ public class ContenidoInstitucionalMapper {
         dto.setId(entidad.getId());
         dto.setSeccion(entidad.getSeccion());
         dto.setTitulo(entidad.getTitulo());
+        dto.setTituloEn(entidad.getTituloEn());
         dto.setContenido(entidad.getContenido());
+        dto.setContenidoEn(entidad.getContenidoEn());
         dto.setPublicado(entidad.getPublicado());
         dto.setCreadoEn(entidad.getCreadoEn());
         dto.setActualizadoEn(entidad.getActualizadoEn());
@@ -42,7 +44,9 @@ public class ContenidoInstitucionalMapper {
         entidad.setEmpresa(empresa);
         entidad.setSeccion(dto.getSeccion());
         entidad.setTitulo(dto.getTitulo());
+        if (dto.getTituloEn() != null) entidad.setTituloEn(TextoOpcional.limpiar(dto.getTituloEn()));
         entidad.setContenido(dto.getContenido());
+        if (dto.getContenidoEn() != null) entidad.setContenidoEn(TextoOpcional.limpiar(dto.getContenidoEn()));
         entidad.setActualizadoPor(actualizadoPor);
 
         if (dto.getPublicado() != null) {
@@ -59,7 +63,9 @@ public class ContenidoInstitucionalMapper {
         entidad.setEmpresa(empresa);
         entidad.setSeccion(dto.getSeccion());
         entidad.setTitulo(dto.getTitulo());
+        if (dto.getTituloEn() != null) entidad.setTituloEn(TextoOpcional.limpiar(dto.getTituloEn()));
         entidad.setContenido(dto.getContenido());
+        if (dto.getContenidoEn() != null) entidad.setContenidoEn(TextoOpcional.limpiar(dto.getContenidoEn()));
         entidad.setActualizadoPor(actualizadoPor);
 
         if (dto.getPublicado() != null) {

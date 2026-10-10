@@ -32,6 +32,9 @@ public class Ubicacion {
     @Column(columnDefinition = "TEXT")
     private String referencias;
 
+    @Column(name = "referencias_en", columnDefinition = "TEXT")
+    private String referenciasEn;
+
     @Column(precision = 10, scale = 7)
     private BigDecimal latitud;
 

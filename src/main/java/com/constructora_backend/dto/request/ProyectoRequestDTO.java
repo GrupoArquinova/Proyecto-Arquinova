@@ -1,6 +1,8 @@
 package com.constructora_backend.dto.request;
 
 import com.constructora_backend.enums.EstadoProyecto;
+import com.constructora_backend.enums.TipoProyecto;
+import com.constructora_backend.enums.TipoRegistroProyecto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -31,8 +33,27 @@ public class ProyectoRequestDTO {
     @Schema(description = "Descripción detallada del proyecto", example = "Exclusivo proyecto de lotes y casas campestres con vista a la cordillera.")
     private String descripcion;
 
-    @Schema(description = "Estado actual del proyecto", example = "PLANIFICACION", allowableValues = {"PLANIFICACION", "EN_CONSTRUCCION", "ENTREGADO", "FINALIZADO"})
-    private EstadoProyecto estadoProyecto = EstadoProyecto.PLANIFICACION;
+    /** Texto en inglés para el sitio público (opcional). */
+    private String descripcionEn;
+
+    @Schema(description = "Etapa del proyecto", example = "EN_DISENO", allowableValues = {"EN_DISENO", "EN_TRAMITE", "EN_CONSTRUCCION", "FINALIZADO"})
+    private EstadoProyecto estadoProyecto = EstadoProyecto.EN_DISENO;
+
+    @Schema(description = "Caso de portafolio u oferta comercial", example = "OFERTA_COMERCIAL", allowableValues = {"PORTAFOLIO", "OFERTA_COMERCIAL"})
+    private TipoRegistroProyecto tipoRegistro;
+
+    @Schema(description = "Tipo de proyecto", example = "RURAL", allowableValues = {"RESIDENCIAL", "RURAL", "TURISTICO", "OTRO"})
+    private TipoProyecto tipoProyecto;
+
+    @Size(max = 255, message = "La participación no puede superar los 255 caracteres")
+    @Schema(description = "Papel de Arquinova en el proyecto", example = "Diseño arquitectónico y gestión de licencias")
+    private String participacion;
+
+    /** Texto en inglés para el sitio público (opcional). */
+    private String participacionEn;
+
+    @Schema(description = "Si es el proyecto destacado del inicio (solo uno por empresa)", example = "false")
+    private Boolean destacado;
 
     @Schema(description = "Indica si el proyecto es visible al público", example = "true")
     private Boolean publicado = false;

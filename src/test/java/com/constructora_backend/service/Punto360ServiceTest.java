@@ -7,11 +7,13 @@ import com.constructora_backend.entity.Etapa;
 import com.constructora_backend.entity.Lote;
 import com.constructora_backend.entity.Proyecto;
 import com.constructora_backend.entity.Punto360;
+import com.constructora_backend.entity.ZonaComun;
 import com.constructora_backend.enums.EscenaPunto360;
 import com.constructora_backend.repository.EtapaRepository;
 import com.constructora_backend.repository.LoteRepository;
 import com.constructora_backend.repository.ProyectoRepository;
 import com.constructora_backend.repository.Punto360Repository;
+import com.constructora_backend.repository.ZonaComunRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +39,8 @@ class Punto360ServiceTest {
     private LoteRepository loteRepository;
     @Mock
     private EtapaRepository etapaRepository;
+    @Mock
+    private ZonaComunRepository zonaComunRepository;
 
     @InjectMocks
     private Punto360Service service;
@@ -155,5 +159,57 @@ class Punto360ServiceTest {
         assertEquals(new BigDecimal("42.5"), respuesta.getPosX());
         assertNull(respuesta.getYaw());
         assertNull(respuesta.getPitch());
+    }
+
+    private ZonaComun zonaDe(Proyecto p) {
+        ZonaComun zona = new ZonaComun();
+        zona.setId(8L);
+        zona.setNombre("Piscina");
+        zona.setProyecto(p);
+        return zona;
+    }
+
+    private Punto360RequestDTO zonas() {
+        Punto360RequestDTO dto = new Punto360RequestDTO();
+        dto.setProyectoId(1L);
+        dto.setEscena(EscenaPunto360.ZONAS);
+        dto.setZonaComunId(8L);
+        dto.setEtiqueta("Piscina");
+        dto.setPosX(new BigDecimal("40.5"));
+        dto.setPosY(new BigDecimal("22"));
+        return dto;
+    }
+
+    @Test
+    void unPuntoDeZonasDestacadasSeGuardaPorPorcentajeYApuntaALaZona() {
+        when(proyectoRepository.findById(1L)).thenReturn(Optional.of(proyecto));
+        when(zonaComunRepository.findById(8L)).thenReturn(Optional.of(zonaDe(proyecto)));
+        when(punto360Repository.save(any(Punto360.class))).thenAnswer(i -> i.getArgument(0));
+
+        Punto360ResponseDTO respuesta = service.guardar(zonas());
+
+        assertEquals(EscenaPunto360.ZONAS, respuesta.getEscena());
+        assertEquals(8L, respuesta.getZonaComunId());
+        assertEquals("Piscina", respuesta.getZonaComunNombre());
+        assertEquals(new BigDecimal("40.5"), respuesta.getPosX());
+        assertNull(respuesta.getYaw());
+    }
+
+    @Test
+    void unPuntoDeZonasDestacadasExigeLaZona() {
+        Punto360RequestDTO dto = zonas();
+        dto.setZonaComunId(null);
+
+        assertThrows(IllegalArgumentException.class, () -> service.guardar(dto));
+        verify(punto360Repository, never()).save(any());
+    }
+
+    @Test
+    void laZonaTieneQueSerDelMismoProyecto() {
+        when(proyectoRepository.findById(1L)).thenReturn(Optional.of(proyecto));
+        when(zonaComunRepository.findById(8L)).thenReturn(Optional.of(zonaDe(otroProyecto)));
+
+        assertThrows(IllegalArgumentException.class, () -> service.guardar(zonas()));
+        verify(punto360Repository, never()).save(any());
     }
 }

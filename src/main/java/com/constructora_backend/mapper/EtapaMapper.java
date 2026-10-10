@@ -15,7 +15,9 @@ public class EtapaMapper {
         EtapaResponseDTO dto = new EtapaResponseDTO();
         dto.setId(etapa.getId());
         dto.setNombre(etapa.getNombre());
+        dto.setNombreEn(etapa.getNombreEn());
         dto.setDescripcion(etapa.getDescripcion());
+        dto.setDescripcionEn(etapa.getDescripcionEn());
         dto.setOrden(etapa.getOrden());
         dto.setActivo(etapa.getActivo());
         dto.setCreadoEn(etapa.getCreadoEn());
@@ -35,7 +37,9 @@ public class EtapaMapper {
         Etapa etapa = new Etapa();
         etapa.setProyecto(proyecto);
         etapa.setNombre(dto.getNombre().trim());
+        if (dto.getNombreEn() != null) etapa.setNombreEn(TextoOpcional.limpiar(dto.getNombreEn()));
         etapa.setDescripcion(dto.getDescripcion());
+        if (dto.getDescripcionEn() != null) etapa.setDescripcionEn(TextoOpcional.limpiar(dto.getDescripcionEn()));
         if (dto.getOrden() != null) {
             etapa.setOrden(dto.getOrden());
         }
@@ -51,7 +55,9 @@ public class EtapaMapper {
 
         etapa.setProyecto(proyecto);
         etapa.setNombre(dto.getNombre().trim());
+        if (dto.getNombreEn() != null) etapa.setNombreEn(TextoOpcional.limpiar(dto.getNombreEn()));
         etapa.setDescripcion(dto.getDescripcion());
+        if (dto.getDescripcionEn() != null) etapa.setDescripcionEn(TextoOpcional.limpiar(dto.getDescripcionEn()));
         if (dto.getOrden() != null) {
             etapa.setOrden(dto.getOrden());
         }

@@ -8,5 +8,7 @@ public enum EscenaPunto360 {
     /** Vista aérea en 360°: igual que el entorno, por ángulos. */
     AEREA,
     /** Plano de urbanismo (imagen plana): los puntos se ubican en porcentajes (posX / posY). */
-    URBANISMO
+    URBANISMO,
+    /** Imagen de las zonas destacadas (imagen plana): un botón por zona común, en porcentajes (posX / posY). */
+    ZONAS
 }

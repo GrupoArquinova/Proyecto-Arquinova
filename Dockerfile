@@ -11,7 +11,7 @@ WORKDIR /app
 COPY pom.xml mvnw ./
 COPY .mvn .mvn
 
-RUN ./mvnw dependency:go-offline -B || true
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -B || true
 
 # Copiar código fuente y compilar artefacto productivo
 COPY src ./src

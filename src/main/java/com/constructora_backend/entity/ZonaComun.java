@@ -29,8 +29,14 @@ public class ZonaComun {
     @Column(nullable = false, length = 150)
     private String nombre;
 
+    @Column(name = "nombre_en", length = 150)
+    private String nombreEn;
+
     @Column(columnDefinition = "TEXT")
     private String descripcion;
+
+    @Column(name = "descripcion_en", columnDefinition = "TEXT")
+    private String descripcionEn;
 
     @Column(nullable = false)
     private Boolean publicado = true;

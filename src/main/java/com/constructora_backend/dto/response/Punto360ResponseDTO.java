@@ -23,6 +23,9 @@ public class Punto360ResponseDTO {
     private Long etapaId;
     private String etapaNombre;
 
+    private Long zonaComunId;
+    private String zonaComunNombre;
+
     private BigDecimal yaw;
     private BigDecimal pitch;
     private BigDecimal posX;

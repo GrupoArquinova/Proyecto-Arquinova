@@ -90,6 +90,7 @@ public class ProyectoService {
 
         Proyecto proyecto = proyectoMapper.toEntity(dto, empresa, creadoPor, actualizadoPor != null ? actualizadoPor : creadoPor);
         Proyecto guardado = proyectoRepository.save(proyecto);
+        asegurarUnSoloDestacado(guardado);
         return proyectoMapper.toDTO(guardado);
     }
 
@@ -111,7 +112,15 @@ public class ProyectoService {
 
         proyectoMapper.updateEntityFromDTO(dto, existente, empresa, actualizadoPor);
         Proyecto actualizado = proyectoRepository.save(existente);
+        asegurarUnSoloDestacado(actualizado);
         return proyectoMapper.toDTO(actualizado);
+    }
+
+    /** Si el proyecto quedó como destacado, los demás de la misma empresa dejan de serlo. */
+    private void asegurarUnSoloDestacado(Proyecto proyecto) {
+        if (Boolean.TRUE.equals(proyecto.getDestacado()) && proyecto.getEmpresa() != null) {
+            proyectoRepository.quitarDestacadoDeOtros(proyecto.getEmpresa().getId(), proyecto.getId());
+        }
     }
 
     @Transactional

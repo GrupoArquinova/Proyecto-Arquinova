@@ -39,6 +39,9 @@ public class LoteRequestDTO {
     @Schema(description = "Descripción general del lote", example = "Lote plano con excelente vista al atardecer.")
     private String descripcion;
 
+    /** Texto en inglés para el sitio público (opcional). */
+    private String descripcionEn;
+
     @Schema(description = "Características específicas o amenidades cercanas")
     private String caracteristicas;
 

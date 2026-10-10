@@ -9,6 +9,7 @@ public interface EstadoSolicitudRepository extends JpaRepository<EstadoSolicitud
 
     List<EstadoSolicitud> findAllByOrderByOrdenAsc();
     List<EstadoSolicitud> findByActivoTrueOrderByOrdenAsc();
+    java.util.Optional<EstadoSolicitud> findFirstByNombreIgnoreCase(String nombre);
     boolean existsByNombre(String nombre);
     boolean existsByNombreAndIdNot(String nombre, Integer id);
 }

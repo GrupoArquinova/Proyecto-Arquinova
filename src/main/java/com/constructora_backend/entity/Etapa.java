@@ -22,8 +22,14 @@ public class Etapa {
     @Column(nullable = false, length = 100)
     private String nombre;
 
+    @Column(name = "nombre_en", length = 100)
+    private String nombreEn;
+
     @Column(columnDefinition = "TEXT")
     private String descripcion;
+
+    @Column(name = "descripcion_en", columnDefinition = "TEXT")
+    private String descripcionEn;
 
     @Column(columnDefinition = "SMALLINT", nullable = false)
     private Short orden = 1;

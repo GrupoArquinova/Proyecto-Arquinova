@@ -17,6 +17,8 @@ public class SolicitudContactoResponseDTO {
     private String nombre;
     private String correo;
     private String telefono;
+    private String servicioInteres;
+    private String idioma;
     private String mensaje;
     private Boolean consentimientoDatos;
     private String ip;

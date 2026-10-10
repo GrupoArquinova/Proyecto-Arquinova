@@ -23,6 +23,9 @@ public class CasaModeloRequestDTO {
     @Schema(description = "Descripción de la casa modelo", example = "Casa de 2 niveles con diseño moderno")
     private String descripcion;
 
+    /** Texto en inglés para el sitio público (opcional). */
+    private String descripcionEn;
+
     @DecimalMin(value = "0.01", message = "El area construida debe ser mayor a 0")
     @Schema(description = "Área construida en metros cuadrados", example = "120.5")
     private BigDecimal areaConstruidaM2;

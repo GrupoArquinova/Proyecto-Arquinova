@@ -10,6 +10,7 @@ import java.util.List;
 public interface LoteRepository extends JpaRepository<Lote, Long> {
 
     List<Lote> findByEtapaId(Long etapaId);
+    long countByEtapaId(Long etapaId);
     List<Lote> findByEtapaIdAndPublicadoTrueAndActivoTrue(Long etapaId);
     List<Lote> findByPublicadoTrueAndActivoTrue();
     List<Lote> findByEstadoId(Integer estadoId);

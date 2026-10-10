@@ -18,6 +18,8 @@ public class MultimediaResponseDTO {
     private String zonaComunNombre;
     private Long casaModeloId;
     private String casaModeloNombre;
+    private Long etapaId;
+    private String etapaNombre;
     private TipoMultimedia tipo;
     private String titulo;
     private String descripcion;

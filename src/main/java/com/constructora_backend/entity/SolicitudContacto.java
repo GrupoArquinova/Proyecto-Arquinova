@@ -42,11 +42,19 @@ public class SolicitudContacto {
     @Column(nullable = false, length = 150)
     private String nombre;
 
-    @Column(nullable = false, length = 254)
+    /** Al menos uno de los dos medios de contacto (correo o teléfono) debe venir informado. */
+    @Column(length = 254)
     private String correo;
 
-    @Column(nullable = false, length = 30)
+    @Column(length = 30)
     private String telefono;
+
+    @Column(name = "servicio_interes", length = 120)
+    private String servicioInteres;
+
+    /** Idioma del sitio cuando la persona escribió: "es" o "en". */
+    @Column(nullable = false, length = 5)
+    private String idioma = "es";
 
     @Column(columnDefinition = "TEXT")
     private String mensaje;

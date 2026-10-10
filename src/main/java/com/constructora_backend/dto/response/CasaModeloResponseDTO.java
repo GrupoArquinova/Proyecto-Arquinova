@@ -25,6 +25,9 @@ public class CasaModeloResponseDTO {
     
     @Schema(description = "Descripción", example = "Casa de 2 niveles")
     private String descripcion;
+
+    /** Texto en inglés para el sitio público (opcional). */
+    private String descripcionEn;
     
     @Schema(description = "Área construida en m2", example = "120.5")
     private BigDecimal areaConstruidaM2;
