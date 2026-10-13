@@ -51,3 +51,8 @@ k8s/secret.yaml
 
 # Token de métricas de Prometheus (secreto)
 prometheus/metricas_token
+
+# Respaldos de la base de datos (contienen datos personales)
+respaldos/
+*.sql.gz
+*.sql.gz.enc

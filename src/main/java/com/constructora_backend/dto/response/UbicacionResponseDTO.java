@@ -46,6 +46,9 @@ public class UbicacionResponseDTO {
     @Schema(description = "URL del plano de urbanismo", example = "https://example.com/urbanismo/plano-general.jpg")
     private String urbanismoUrl;
 
+    @Schema(description = "Plano de urbanismo con el texto en inglés (opcional)")
+    private String urbanismoUrlEn;
+
     @Schema(description = "URL de vista aérea", example = "https://example.com/videos/vista-aerea.mp4")
     private String vistaAereaUrl;
 

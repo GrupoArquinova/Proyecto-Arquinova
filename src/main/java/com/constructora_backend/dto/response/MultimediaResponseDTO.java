@@ -24,6 +24,7 @@ public class MultimediaResponseDTO {
     private String titulo;
     private String descripcion;
     private String url;
+    private String urlEn;
     private String nombreArchivo;
     private String mimeType;
     private Long tamanoBytes;

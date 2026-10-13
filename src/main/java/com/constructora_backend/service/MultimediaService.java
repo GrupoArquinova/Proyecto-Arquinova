@@ -72,6 +72,7 @@ public class MultimediaService {
                 .titulo(dto.getTitulo())
                 .descripcion(dto.getDescripcion())
                 .url(dto.getUrl())
+                .urlEn(limpiarUrl(dto.getUrlEn()))
                 .nombreArchivo(dto.getNombreArchivo())
                 .mimeType(dto.getMimeType())
                 .tamanoBytes(dto.getTamanoBytes())
@@ -117,6 +118,12 @@ public class MultimediaService {
         return lista.stream().map(this::mapToDTO).toList();
     }
 
+    private static String limpiarUrl(String texto) {
+        if (texto == null) return null;
+        String limpio = texto.trim();
+        return limpio.isEmpty() ? null : limpio;
+    }
+
     @Transactional
     public MultimediaResponseDTO actualizar(Long id, MultimediaRequestDTO dto) {
         Multimedia multimedia = multimediaRepository.findById(id)
@@ -125,6 +132,8 @@ public class MultimediaService {
         multimedia.setTitulo(dto.getTitulo());
         multimedia.setDescripcion(dto.getDescripcion());
         multimedia.setUrl(dto.getUrl());
+        // null = no se tocó; vacío = quitar la versión en inglés
+        if (dto.getUrlEn() != null) multimedia.setUrlEn(limpiarUrl(dto.getUrlEn()));
         if (dto.getOrden() != null) multimedia.setOrden(dto.getOrden());
         if (dto.getPortada() != null) multimedia.setPortada(dto.getPortada());
         if (dto.getPublicado() != null) multimedia.setPublicado(dto.getPublicado());
@@ -182,6 +191,7 @@ public class MultimediaService {
                 .titulo(entity.getTitulo())
                 .descripcion(entity.getDescripcion())
                 .url(entity.getUrl())
+                .urlEn(entity.getUrlEn())
                 .nombreArchivo(entity.getNombreArchivo())
                 .mimeType(entity.getMimeType())
                 .tamanoBytes(entity.getTamanoBytes())

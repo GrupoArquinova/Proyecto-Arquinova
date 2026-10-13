@@ -53,6 +53,10 @@ public class UbicacionRequestDTO {
     @Schema(description = "URL del plano de urbanismo o render general", example = "https://example.com/urbanismo/plano-general.jpg")
     private String urbanismoUrl;
 
+    @Size(max = 1000, message = "La URL del plano de urbanismo en inglés no puede superar los 1000 caracteres")
+    @Schema(description = "Plano de urbanismo con el texto en inglés (opcional)")
+    private String urbanismoUrlEn;
+
     @Size(max = 1000, message = "La URL de vista aerea no puede superar los 1000 caracteres")
     @Schema(description = "URL del video o imagen aérea con dron", example = "https://example.com/videos/vista-aerea.mp4")
     private String vistaAereaUrl;

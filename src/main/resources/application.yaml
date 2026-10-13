@@ -117,11 +117,21 @@ management:
     web:
       exposure:
         include: health,info,metrics,prometheus
+  # La salud que ve el monitoreo depende solo de lo imprescindible (la base de datos; Redis tiene respaldo en memoria).
+  # El correo no es crítico (el envío es asíncrono y tiene circuit breaker) y RabbitMQ solo existe en compose/Kubernetes.
+  health:
+    mail:
+      enabled: false
+    rabbit:
+      enabled: ${HEALTH_RABBIT:false}
   endpoint:
     health:
       show-details: when_authorized
       probes:
         enabled: true
+      group:
+        readiness:
+          include: db
     prometheus:
       enabled: true
   metrics:

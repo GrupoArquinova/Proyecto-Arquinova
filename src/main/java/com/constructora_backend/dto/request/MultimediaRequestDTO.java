@@ -29,6 +29,9 @@ public class MultimediaRequestDTO {
     @Size(max = 1500, message = "La URL no puede superar los 1500 caracteres")
     private String url;
 
+    @Size(max = 1500, message = "La URL en inglés no puede superar los 1500 caracteres")
+    private String urlEn;
+
     private String nombreArchivo;
     private String mimeType;
 
