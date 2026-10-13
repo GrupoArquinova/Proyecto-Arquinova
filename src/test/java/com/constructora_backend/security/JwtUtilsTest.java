@@ -82,4 +82,34 @@ class JwtUtilsTest {
         boolean esValido = jwtUtils.validarToken("token_completamente_invalido_xyz");
         assertFalse(esValido);
     }
+
+
+    @Test
+    @DisplayName("generarToken - el token lleva los roles del usuario y su vencimiento")
+    void tokenLlevaRolesYVencimiento() {
+        UserDetails admin = new User("admin@constructora.com", "x",
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMINISTRADOR")));
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getPrincipal()).thenReturn(admin);
+
+        String token = jwtUtils.generarToken(authentication);
+
+        String payload = new String(java.util.Base64.getUrlDecoder().decode(token.split("\\.")[1]));
+        assertTrue(payload.contains("\"roles\":[\"ROLE_ADMINISTRADOR\"]"), payload);
+        long vence = jwtUtils.obtenerExpiracionMillis(token);
+        assertTrue(vence > System.currentTimeMillis() + expirationMs - 60_000);
+        assertTrue(vence <= System.currentTimeMillis() + expirationMs + 1_000);
+    }
+
+    @Test
+    @DisplayName("generarTokenRenovado - emite un token válido para el mismo usuario")
+    void tokenRenovado() {
+        UserDetails admin = new User("admin@constructora.com", "x",
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMINISTRADOR")));
+
+        String token = jwtUtils.generarTokenRenovado(admin);
+
+        assertTrue(jwtUtils.validarToken(token));
+        assertEquals("admin@constructora.com", jwtUtils.obtenerCorreoDelToken(token));
+    }
 }

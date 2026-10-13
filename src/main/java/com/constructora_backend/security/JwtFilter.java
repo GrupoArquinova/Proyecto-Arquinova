@@ -64,7 +64,8 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         String path = request.getRequestURI();
-        boolean skip = path.startsWith("/api/auth/") || path.equals("/api/auth");
+        // /actuator/prometheus se autentica con su propio token (MetricasTokenFilter), que no es un JWT
+        boolean skip = path.startsWith("/api/auth/") || path.equals("/api/auth") || path.equals("/actuator/prometheus");
         if (skip) {
             log.debug("Saltando filtro JWT para ruta pública: {}", path);
         }

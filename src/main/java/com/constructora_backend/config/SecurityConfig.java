@@ -1,6 +1,7 @@
 package com.constructora_backend.config;
 
 import com.constructora_backend.security.JwtFilter;
+import com.constructora_backend.security.MetricasTokenFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,6 +9,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -36,18 +39,31 @@ public class SecurityConfig {
     private final RateLimitingFilter rateLimitingFilter;
     private final CorrelationIdFilter correlationIdFilter;
     private final ClientRegistrationRepository clientRegistrationRepository;
+    private final MetricasTokenFilter metricasTokenFilter;
 
     @Value("${cors.allowed-origins:http://localhost:4200}")
     private String allowedOrigins;
 
+    /** Swagger y la documentación OpenAPI: cerrados por defecto; solo se abren en desarrollo (APP_DOCS_PUBLICAS=true). */
+    @Value("${app.seguridad.docs-publicas:false}")
+    private boolean docsPublicas;
+
+    /** La API solo devuelve JSON: nada puede cargar scripts, estilos ni imágenes de ella, ni incrustarla en otra página. */
+    private static final String CSP_API = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'";
+    /** Con Swagger abierto la interfaz necesita sus propios scripts y estilos. */
+    private static final String CSP_CON_DOCS = "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+            + "style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'";
+
     public SecurityConfig(JwtFilter jwtFilter,
                           RateLimitingFilter rateLimitingFilter,
                           @Autowired(required = false) CorrelationIdFilter correlationIdFilter,
-                          @Autowired(required = false) ClientRegistrationRepository clientRegistrationRepository) {
+                          @Autowired(required = false) ClientRegistrationRepository clientRegistrationRepository,
+                          @Autowired(required = false) MetricasTokenFilter metricasTokenFilter) {
         this.jwtFilter = jwtFilter;
         this.rateLimitingFilter = rateLimitingFilter;
         this.correlationIdFilter = correlationIdFilter != null ? correlationIdFilter : new CorrelationIdFilter();
         this.clientRegistrationRepository = clientRegistrationRepository;
+        this.metricasTokenFilter = metricasTokenFilter;
     }
 
     @Bean
@@ -66,6 +82,9 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.deny())
+                        // HSTS solo se envía por HTTPS (detrás de un proxy hace falta server.forward-headers-strategy)
+                        .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(docsPublicas ? CSP_CON_DOCS : CSP_API))
                         .xssProtection(xss -> {})
                         .contentTypeOptions(contentType -> {})
                         .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
@@ -93,12 +112,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/multimedia/*/*").permitAll()
                         // Textos institucionales ("Respaldo / Nosotros") de una empresa, solo publicados.
                         .requestMatchers(HttpMethod.GET, "/api/contenidos-institucionales/empresa/**").permitAll()
-                        .requestMatchers(
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html"
-                        ).permitAll()
-                        .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                                .access((autenticacion, contexto) -> new AuthorizationDecision(
+                                        docsPublicas || tieneRol(autenticacion.get(), "ROLE_ADMINISTRADOR")))
+                        // Las sondas de salud (Render, Kubernetes) son públicas; las métricas solo con el token de Prometheus
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/actuator/prometheus").hasRole("METRICAS")
                         .requestMatchers("/actuator/**").hasRole("ADMINISTRADOR")
                         .requestMatchers("/api/admin/**").hasRole("ADMINISTRADOR")
                         .anyRequest().authenticated()
@@ -112,12 +131,20 @@ public class SecurityConfig {
             );
         }
 
+        if (metricasTokenFilter != null) {
+            http.addFilterBefore(metricasTokenFilter, UsernamePasswordAuthenticationFilter.class);
+        }
         http.addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
 
+    }
+
+    private static boolean tieneRol(Authentication autenticacion, String rol) {
+        return autenticacion != null && autenticacion.isAuthenticated()
+                && autenticacion.getAuthorities().stream().anyMatch(a -> rol.equals(a.getAuthority()));
     }
 
     @Bean
