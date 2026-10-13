@@ -48,3 +48,6 @@ tests/load/resultados/
 
 ### Secretos de Kubernetes (usar k8s/secret.example.yaml como plantilla) ###
 k8s/secret.yaml
+
+# Token de métricas de Prometheus (secreto)
+prometheus/metricas_token

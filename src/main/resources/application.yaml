@@ -75,6 +75,8 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  # Detrás de un proxy (Render, Kubernetes) la API ve HTTP; así toma el protocolo real de X-Forwarded-Proto y envía HSTS
+  forward-headers-strategy: framework
   # Compresión de respuestas HTTP para mejor rendimiento
   compression:
     enabled: true
@@ -88,7 +90,15 @@ server:
 
 jwt:
   secret: ${JWT_SECRET}
-  expiration: ${JWT_EXPIRATION:86400000}
+  # Sesión corta (1 hora); el panel la renueva solo mientras la persona trabaja (POST /api/auth/renovar)
+  expiration: ${JWT_EXPIRATION:3600000}
+
+# ─── Documentación de la API (Swagger): cerrada por defecto; en desarrollo APP_DOCS_PUBLICAS=true ───
+springdoc:
+  api-docs:
+    enabled: ${APP_DOCS_PUBLICAS:false}
+  swagger-ui:
+    enabled: ${APP_DOCS_PUBLICAS:false}
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
@@ -158,6 +168,11 @@ resilience4j:
 
 # ─── Contacto web ────────────────────────────────────────────────────────────
 app:
+  seguridad:
+    # Swagger / OpenAPI: cerrado por defecto. En desarrollo: APP_DOCS_PUBLICAS=true
+    docs-publicas: ${APP_DOCS_PUBLICAS:false}
+    # Token con el que Prometheus lee /actuator/prometheus. Vacío = métricas cerradas para todos
+    metricas-token: ${METRICAS_TOKEN:}
   # Dirección pública del sitio (por ejemplo https://www.midominio.com). Si se deja vacía, los correos no llevan enlaces al sitio.
   sitio-url: ${APP_SITIO_URL:}
   contacto:

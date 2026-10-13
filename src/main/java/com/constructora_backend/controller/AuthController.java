@@ -5,6 +5,7 @@ import com.constructora_backend.dto.auth.LoginRequestDTO;
 import com.constructora_backend.security.JwtUtils;
 import com.constructora_backend.security.LoginAttemptService;
 import com.constructora_backend.security.TokenBlacklistService;
+import com.constructora_backend.security.UserDetailsServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -22,6 +23,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -38,15 +40,18 @@ public class AuthController {
     private final JwtUtils jwtUtils;
     private final LoginAttemptService loginAttemptService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final UserDetailsServiceImpl userDetailsService;
 
     public AuthController(AuthenticationManager authenticationManager,
                           JwtUtils jwtUtils,
                           @Autowired(required = false) LoginAttemptService loginAttemptService,
-                          @Autowired(required = false) TokenBlacklistService tokenBlacklistService) {
+                          @Autowired(required = false) TokenBlacklistService tokenBlacklistService,
+                          UserDetailsServiceImpl userDetailsService) {
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
         this.loginAttemptService = loginAttemptService;
         this.tokenBlacklistService = tokenBlacklistService;
+        this.userDetailsService = userDetailsService;
     }
 
     @PostMapping("/login")
@@ -118,10 +123,59 @@ public class AuthController {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ") && tokenBlacklistService != null) {
             String token = authHeader.substring(7);
-            // Revocar token durante su período de validez máximo (24 horas)
-            long expiracionMillis = System.currentTimeMillis() + 86400000L;
-            tokenBlacklistService.revocarToken(token, expiracionMillis);
+            tokenBlacklistService.revocarToken(token, vencimientoParaRevocar(token));
         }
         return ResponseEntity.ok(Map.of("mensaje", "Sesión cerrada exitosamente"));
+    }
+
+    @PostMapping("/renovar")
+    @Operation(summary = "Renovar la sesión",
+            description = "Cambia un token vigente por uno nuevo (con los roles actuales del usuario) y revoca el anterior. "
+                    + "Así la sesión puede ser corta sin obligar a iniciar sesión de nuevo mientras la persona está trabajando.")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Token nuevo",
+                    content = @Content(schema = @Schema(implementation = AuthResponseDTO.class))),
+            @ApiResponse(responseCode = "401", description = "Token ausente, vencido, revocado o de un usuario desactivado")
+    })
+    public ResponseEntity<?> renovar(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return noAutorizado();
+        }
+        String token = authHeader.substring(7);
+
+        if ((tokenBlacklistService != null && tokenBlacklistService.estaRevocado(token)) || !jwtUtils.validarToken(token)) {
+            return noAutorizado();
+        }
+
+        try {
+            // Se vuelve a leer al usuario: si lo desactivaron o le cambiaron el rol, lo nota aquí
+            UserDetails usuario = userDetailsService.loadUserByUsername(jwtUtils.obtenerCorreoDelToken(token));
+            if (!usuario.isEnabled()) {
+                return noAutorizado();
+            }
+            String nuevo = jwtUtils.generarTokenRenovado(usuario);
+            if (tokenBlacklistService != null) {
+                tokenBlacklistService.revocarToken(token, vencimientoParaRevocar(token));
+            }
+            return ResponseEntity.ok(new AuthResponseDTO(nuevo));
+        } catch (Exception e) {
+            return noAutorizado();
+        }
+    }
+
+    private ResponseEntity<?> noAutorizado() {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "No autorizado", "mensaje", "Token JWT ausente, vencido o revocado"));
+    }
+
+    /** La revocación dura lo que le falta al token por vencer; si no se puede leer, el máximo de una sesión larga. */
+    private long vencimientoParaRevocar(String token) {
+        try {
+            return jwtUtils.obtenerExpiracionMillis(token);
+        } catch (Exception e) {
+            return System.currentTimeMillis() + 86400000L;
+        }
     }
 }
