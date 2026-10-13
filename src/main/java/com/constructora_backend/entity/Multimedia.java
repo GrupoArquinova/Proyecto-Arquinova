@@ -67,6 +67,10 @@ public class Multimedia {
     @Column(nullable = false, length = 1500)
     private String url;
 
+    /** Misma imagen con su texto en inglés (opcional); el sitio la usa cuando la persona lo ve en inglés. */
+    @Column(name = "url_en", length = 1500)
+    private String urlEn;
+
     @Column(name = "nombre_archivo")
     private String nombreArchivo;
 

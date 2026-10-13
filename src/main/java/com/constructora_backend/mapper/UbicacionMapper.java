@@ -23,6 +23,7 @@ public class UbicacionMapper {
         dto.setLongitud(ubicacion.getLongitud());
         dto.setGoogleMapsUrl(ubicacion.getGoogleMapsUrl());
         dto.setUrbanismoUrl(ubicacion.getUrbanismoUrl());
+        dto.setUrbanismoUrlEn(ubicacion.getUrbanismoUrlEn());
         dto.setVistaAereaUrl(ubicacion.getVistaAereaUrl());
         dto.setRecorrido360Url(ubicacion.getRecorrido360Url());
         dto.setVideoComoLlegarUrl(ubicacion.getVideoComoLlegarUrl());
@@ -51,6 +52,7 @@ public class UbicacionMapper {
         ubicacion.setLongitud(dto.getLongitud());
         ubicacion.setGoogleMapsUrl(dto.getGoogleMapsUrl());
         ubicacion.setUrbanismoUrl(dto.getUrbanismoUrl());
+        if (dto.getUrbanismoUrlEn() != null) ubicacion.setUrbanismoUrlEn(TextoOpcional.limpiar(dto.getUrbanismoUrlEn()));
         ubicacion.setVistaAereaUrl(dto.getVistaAereaUrl());
         ubicacion.setRecorrido360Url(dto.getRecorrido360Url());
         ubicacion.setVideoComoLlegarUrl(dto.getVideoComoLlegarUrl());
@@ -71,6 +73,7 @@ public class UbicacionMapper {
         ubicacion.setLongitud(dto.getLongitud());
         ubicacion.setGoogleMapsUrl(dto.getGoogleMapsUrl());
         ubicacion.setUrbanismoUrl(dto.getUrbanismoUrl());
+        if (dto.getUrbanismoUrlEn() != null) ubicacion.setUrbanismoUrlEn(TextoOpcional.limpiar(dto.getUrbanismoUrlEn()));
         ubicacion.setVistaAereaUrl(dto.getVistaAereaUrl());
         ubicacion.setRecorrido360Url(dto.getRecorrido360Url());
         ubicacion.setVideoComoLlegarUrl(dto.getVideoComoLlegarUrl());

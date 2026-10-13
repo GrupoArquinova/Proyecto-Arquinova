@@ -93,6 +93,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET - definela en el archivo .env (minimo 32 caracteres)}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
       APP_DOCS_PUBLICAS: ${APP_DOCS_PUBLICAS:-false}
+      HEALTH_RABBIT: "true"
       METRICAS_TOKEN: ${METRICAS_TOKEN:-}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
       MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}

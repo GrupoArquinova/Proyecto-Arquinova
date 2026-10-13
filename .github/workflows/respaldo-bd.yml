@@ -1,0 +1,102 @@
+name: Respaldo diario de la base de datos (Aiven)
+
+# Todos los días a las 03:30 hora de Colombia (08:30 UTC) saca una copia completa de la base de datos, comprueba que se puede
+# restaurar (la carga en un MySQL 8.4 temporal), la cifra y la guarda 30 días como artefacto del workflow.
+# También se puede lanzar a mano desde la pestaña Actions ("Run workflow").
+#
+# IMPORTANTE: el repositorio es público y la base contiene datos personales (solicitudes de contacto) y hashes de contraseñas.
+# Por eso el respaldo se cifra con AES-256 ANTES de subirlo y la clave vive solo en los secrets del repositorio.
+# Si el workflow falla, GitHub envía un correo a quien editó por última vez el cron.
+#
+# Secrets necesarios (Settings > Secrets and variables > Actions):
+#   AIVEN_DB_HOST, AIVEN_DB_PORT, AIVEN_DB_USER, AIVEN_DB_PASSWORD, AIVEN_DB_NAME, BACKUP_PASSPHRASE
+# Ver docs/OPERACION.md para restaurar un respaldo.
+
+on:
+  schedule:
+    - cron: "30 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: respaldo-bd
+  cancel-in-progress: false
+
+jobs:
+  respaldo:
+    name: Respaldar, verificar y cifrar
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: restauracion
+          MYSQL_DATABASE: verificacion
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -prestauracion"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    env:
+      AIVEN_DB_HOST: ${{ secrets.AIVEN_DB_HOST }}
+      AIVEN_DB_PORT: ${{ secrets.AIVEN_DB_PORT }}
+      AIVEN_DB_USER: ${{ secrets.AIVEN_DB_USER }}
+      AIVEN_DB_NAME: ${{ secrets.AIVEN_DB_NAME }}
+      MYSQL_PWD: ${{ secrets.AIVEN_DB_PASSWORD }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Comprobar que están los secretos
+        run: |
+          faltan=0
+          for nombre in AIVEN_DB_HOST AIVEN_DB_PORT AIVEN_DB_USER AIVEN_DB_NAME MYSQL_PWD BACKUP_PASSPHRASE; do
+            if [ -z "${!nombre}" ]; then echo "::error::Falta el secret para $nombre"; faltan=1; fi
+          done
+          [ "$faltan" = "0" ] || exit 1
+
+      - name: Instalar el cliente de MySQL
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq mysql-client
+
+      - name: Sacar la copia de la base de datos
+        run: |
+          set -euo pipefail
+          # --single-transaction: copia coherente sin bloquear la base mientras la usa el sitio
+          mysqldump --host="$AIVEN_DB_HOST" --port="$AIVEN_DB_PORT" --user="$AIVEN_DB_USER" \
+            --ssl-mode=REQUIRED --single-transaction --routines --triggers --events \
+            --set-gtid-purged=OFF --no-tablespaces --column-statistics=0 \
+            "$AIVEN_DB_NAME" | gzip -9 > respaldo.sql.gz
+          ls -l respaldo.sql.gz
+          # Una copia de menos de 5 KB es casi seguro una copia vacía o rota
+          [ "$(stat -c%s respaldo.sql.gz)" -gt 5000 ] || { echo "::error::La copia es sospechosamente pequeña"; exit 1; }
+
+      - name: Comprobar que la copia se puede restaurar
+        run: |
+          set -euo pipefail
+          zcat respaldo.sql.gz | MYSQL_PWD=restauracion mysql --host=127.0.0.1 --port=3306 --user=root --ssl-mode=DISABLED verificacion
+          q() { MYSQL_PWD=restauracion mysql --host=127.0.0.1 --user=root --ssl-mode=DISABLED -N -e "$1" verificacion; }
+          tablas=$(q "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='verificacion'")
+          usuarios=$(q "SELECT COUNT(*) FROM usuarios")
+          proyectos=$(q "SELECT COUNT(*) FROM proyectos")
+          echo "Restauración de prueba: $tablas tablas, $usuarios usuarios, $proyectos proyectos"
+          [ "$tablas" -ge 15 ] || { echo "::error::Pocas tablas ($tablas): la copia está incompleta"; exit 1; }
+          [ "$usuarios" -ge 1 ] || { echo "::error::No hay usuarios en la copia"; exit 1; }
+
+      - name: Cifrar la copia (AES-256)
+        run: |
+          set -euo pipefail
+          fecha=$(date -u +%Y%m%d-%H%M)
+          openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in respaldo.sql.gz -out "respaldo-aiven-$fecha.sql.gz.enc" -pass env:BACKUP_PASSPHRASE
+          shred -u respaldo.sql.gz
+          ls -l respaldo-aiven-*.enc
+
+      - name: Guardar el respaldo cifrado (30 días)
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-bd-cifrado
+          path: respaldo-aiven-*.sql.gz.enc
+          retention-days: 30
+          if-no-files-found: error

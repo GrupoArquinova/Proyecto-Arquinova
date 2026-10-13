@@ -47,6 +47,10 @@ public class Ubicacion {
     @Column(name = "urbanismo_url", length = 1000)
     private String urbanismoUrl;
 
+    /** El mismo plano con su texto en inglés (opcional). */
+    @Column(name = "urbanismo_url_en", length = 1000)
+    private String urbanismoUrlEn;
+
     @Column(name = "vista_aerea_url", length = 1000)
     private String vistaAereaUrl;
 
