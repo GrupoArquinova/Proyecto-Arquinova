@@ -14,6 +14,8 @@ public class SolicitudContactoResponseDTO {
     private String proyectoNombre;
     private Long loteId;
     private String loteCodigo;
+    private Long casaModeloId;
+    private String casaModeloNombre;
     private String nombre;
     private String correo;
     private String telefono;

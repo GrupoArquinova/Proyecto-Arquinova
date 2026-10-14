@@ -2,6 +2,7 @@ package com.constructora_backend.mapper;
 
 import com.constructora_backend.dto.SolicitudContactoPublicDTO;
 import com.constructora_backend.dto.response.SolicitudContactoResponseDTO;
+import com.constructora_backend.entity.CasaModelo;
 import com.constructora_backend.entity.EstadoSolicitud;
 import com.constructora_backend.entity.Lote;
 import com.constructora_backend.entity.Proyecto;
@@ -45,6 +46,11 @@ public class SolicitudContactoMapper {
             dto.setLoteCodigo(entidad.getLote().getCodigo());
         }
 
+        if (entidad.getCasaModelo() != null) {
+            dto.setCasaModeloId(entidad.getCasaModelo().getId());
+            dto.setCasaModeloNombre(entidad.getCasaModelo().getNombre());
+        }
+
         if (entidad.getAtendidaPor() != null) {
             dto.setAtendidaPorId(entidad.getAtendidaPor().getId());
             dto.setAtendidaPorNombre(entidad.getAtendidaPor().getNombreCompleto());
@@ -54,12 +60,17 @@ public class SolicitudContactoMapper {
     }
 
     public SolicitudContacto toEntity(SolicitudContactoPublicDTO dto, EstadoSolicitud estadoInicial, Proyecto proyecto, Lote lote) {
+        return toEntity(dto, estadoInicial, proyecto, lote, null);
+    }
+
+    public SolicitudContacto toEntity(SolicitudContactoPublicDTO dto, EstadoSolicitud estadoInicial, Proyecto proyecto, Lote lote, CasaModelo casaModelo) {
         if (dto == null) return null;
 
         SolicitudContacto entidad = new SolicitudContacto();
         entidad.setEstado(estadoInicial);
         entidad.setProyecto(proyecto);
         entidad.setLote(lote);
+        entidad.setCasaModelo(casaModelo);
         entidad.setNombre(dto.getNombre().trim());
         entidad.setCorreo(limpiar(dto.getCorreo()) == null ? null : limpiar(dto.getCorreo()).toLowerCase());
         entidad.setTelefono(limpiar(dto.getTelefono()));

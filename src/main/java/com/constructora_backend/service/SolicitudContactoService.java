@@ -38,6 +38,9 @@ public class SolicitudContactoService {
     private LoteRepository loteRepository;
 
     @Autowired
+    private CasaModeloRepository casaModeloRepository;
+
+    @Autowired
     private UsuarioRepository usuarioRepository;
 
     @Autowired
@@ -93,18 +96,27 @@ public class SolicitudContactoService {
                     .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Lote no encontrado con ID: "+ dto.getLoteId()));
         }
 
+        CasaModelo casaModelo = null;
+        if (dto.getCasaModeloId() != null){
+            casaModelo = casaModeloRepository.findById(dto.getCasaModeloId())
+                    .orElseThrow(() -> new com.constructora_backend.exception.ResourceNotFoundException("Tipología no encontrada con ID: " + dto.getCasaModeloId()));
+            if (proyecto != null && !casaModelo.getProyecto().getId().equals(proyecto.getId())) {
+                throw new com.constructora_backend.exception.BadRequestException("La tipología no pertenece al proyecto indicado");
+            }
+        }
+
         // 1. Mapear y guardar la solicitud en la Base de Datos
-        SolicitudContacto solicitud = solicitudMapper.toEntity(dto, estadoInicial, proyecto, lote);
+        SolicitudContacto solicitud = solicitudMapper.toEntity(dto, estadoInicial, proyecto, lote, casaModelo);
         SolicitudContacto guardada = solicitudRepository.save(solicitud);
 
         // 2. Disparar el envío de correo electrónico a la empresa de forma segura
         try {
-            String nombreProyectoStr = (proyecto != null) ? proyecto.getNombre() : "No especificado / General";
             emailService.enviarCorreoNuevaSolicitud(
                     guardada.getNombre(),
                     guardada.getTelefono(),
                     guardada.getCorreo(),
-                    nombreProyectoStr,
+                    proyecto != null ? proyecto.getNombre() : null,
+                    describirInteres(lote, casaModelo, "es"), // el aviso es para el equipo: siempre en español
                     guardada.getServicioInteres(),
                     dto.getMensaje(),
                     guardada.getIdioma()
@@ -119,13 +131,23 @@ public class SolicitudContactoService {
         if (guardada.getCorreo() != null && !guardada.getCorreo().isBlank()) {
             try {
                 emailService.enviarConfirmacionSolicitud(guardada.getNombre(), guardada.getCorreo(),
-                        proyecto != null ? proyecto.getNombre() : null, guardada.getIdioma());
+                        proyecto != null ? proyecto.getNombre() : null,
+                        describirInteres(lote, casaModelo, guardada.getIdioma()),
+                        guardada.getMensaje(), guardada.getIdioma());
             } catch (Exception ex) {
                 log.error("La solicitud se guardó, pero no se pudo disparar la confirmación al cliente: {}", ex.getMessage());
             }
         }
 
         return solicitudMapper.toDTO(guardada);
+    }
+
+    /** Lo que la persona consultó, para decírselo en la confirmación: "Villa Samán", "Lote LT-101" o ambos. */
+    static String describirInteres(Lote lote, CasaModelo casaModelo, String idioma) {
+        java.util.List<String> partes = new java.util.ArrayList<>();
+        if (casaModelo != null && casaModelo.getNombre() != null) partes.add(casaModelo.getNombre());
+        if (lote != null && lote.getCodigo() != null) partes.add(("en".equals(idioma) ? "Lot " : "Lote ") + lote.getCodigo());
+        return partes.isEmpty() ? null : String.join(" · ", partes);
     }
 
     @Transactional

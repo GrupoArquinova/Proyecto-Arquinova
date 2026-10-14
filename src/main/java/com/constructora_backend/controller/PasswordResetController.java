@@ -28,11 +28,11 @@ public class PasswordResetController {
     private final PasswordResetService passwordResetService;
 
     @PostMapping("/forgot-password")
-    @Operation(summary = "Solicitar token de recuperación", description = "Genera un token de recuperación y lo envía al correo del usuario.")
+    @Operation(summary = "Solicitar enlace de recuperación", description = "Si el correo pertenece a una cuenta activa, le envía un enlace para restablecer la contraseña. La respuesta es la misma exista o no la cuenta.")
     public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         try {
             passwordResetService.solicitarRecuperacion(request);
-            return ResponseEntity.ok(Map.of("mensaje", "Se ha enviado un token de recuperación a tu correo"));
+            return ResponseEntity.ok(Map.of("mensaje", "Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña. Revisa tu bandeja de entrada y la carpeta de spam."));
         } catch (MailException e) {
             log.error("Fallo al enviar correo de recuperación: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

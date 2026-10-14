@@ -12,6 +12,9 @@ public class SolicitudContactoPublicDTO {
 
     private Long loteId;
 
+    /** Tipología (villa) por la que se consulta; opcional. */
+    private Long casaModeloId;
+
     @NotBlank(message = "El nombre ess obligatorio")
     @Size(max = 150, message = "El nombre no puede superar los 150 caracteres")
     private String nombre;

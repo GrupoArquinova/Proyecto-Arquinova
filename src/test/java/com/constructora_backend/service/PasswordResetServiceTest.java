@@ -74,22 +74,40 @@ class PasswordResetServiceTest {
         assertEquals(usuarioPrueba, tokenGuardado.getUsuario());
         assertTrue(tokenGuardado.getExpiraEn().isAfter(LocalDateTime.now()));
 
-        verify(emailService, times(1)).enviarCorreoRecuperacion(eq("test@constructora.com"), anyString());
+        ArgumentCaptor<String> tokenEnviado = ArgumentCaptor.forClass(String.class);
+        verify(emailService, times(1)).enviarCorreoRecuperacion(eq("test@constructora.com"), tokenEnviado.capture());
+
+        // En la base solo queda el hash: el token real viaja únicamente en el correo
+        assertNotEquals(tokenEnviado.getValue(), tokenGuardado.getTokenHash());
+        assertEquals(PasswordResetService.hashear(tokenEnviado.getValue()), tokenGuardado.getTokenHash());
+        assertEquals(64, tokenGuardado.getTokenHash().length());
     }
 
     @Test
-    @DisplayName("solicitarRecuperacion - Debe lanzar ResourceNotFoundException cuando el usuario no existe")
+    @DisplayName("solicitarRecuperacion - Si el correo no existe no lanza error ni envía nada (no revela qué correos hay)")
     void solicitarRecuperacion_UsuarioNoEncontrado() {
         ForgotPasswordRequest request = new ForgotPasswordRequest();
         request.setCorreo("inexistente@constructora.com");
 
         when(usuarioRepository.findByCorreo("inexistente@constructora.com")).thenReturn(Optional.empty());
 
-        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () ->
-                passwordResetService.solicitarRecuperacion(request)
-        );
+        assertDoesNotThrow(() -> passwordResetService.solicitarRecuperacion(request));
 
-        assertTrue(exception.getMessage().contains("No se encontró ningún usuario"));
+        verify(tokenRepository, never()).save(any());
+        verify(emailService, never()).enviarCorreoRecuperacion(anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("solicitarRecuperacion - Una cuenta inactiva se trata igual que una que no existe")
+    void solicitarRecuperacion_CuentaInactiva() {
+        usuarioPrueba.setActivo(false);
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setCorreo("test@constructora.com");
+
+        when(usuarioRepository.findByCorreo("test@constructora.com")).thenReturn(Optional.of(usuarioPrueba));
+
+        assertDoesNotThrow(() -> passwordResetService.solicitarRecuperacion(request));
+
         verify(tokenRepository, never()).save(any());
         verify(emailService, never()).enviarCorreoRecuperacion(anyString(), anyString());
     }
@@ -109,7 +127,7 @@ class PasswordResetServiceTest {
                 .usadoEn(null)
                 .build();
 
-        when(tokenRepository.findByTokenHash("token-valido-123")).thenReturn(Optional.of(tokenEntity));
+        when(tokenRepository.findByTokenHash(PasswordResetService.hashear("token-valido-123"))).thenReturn(Optional.of(tokenEntity));
         when(passwordEncoder.encode("NuevaPassword123!")).thenReturn("encoded_new_password");
 
         passwordResetService.restablecerPassword(request);
@@ -127,7 +145,7 @@ class PasswordResetServiceTest {
         request.setToken("token-fantasma");
         request.setNuevaPassword("NuevaPassword123!");
 
-        when(tokenRepository.findByTokenHash("token-fantasma")).thenReturn(Optional.empty());
+        when(tokenRepository.findByTokenHash(PasswordResetService.hashear("token-fantasma"))).thenReturn(Optional.empty());
 
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () ->
                 passwordResetService.restablecerPassword(request)
@@ -152,7 +170,7 @@ class PasswordResetServiceTest {
                 .usadoEn(LocalDateTime.now().minusMinutes(5))
                 .build();
 
-        when(tokenRepository.findByTokenHash("token-usado")).thenReturn(Optional.of(tokenEntity));
+        when(tokenRepository.findByTokenHash(PasswordResetService.hashear("token-usado"))).thenReturn(Optional.of(tokenEntity));
 
         BadRequestException exception = assertThrows(BadRequestException.class, () ->
                 passwordResetService.restablecerPassword(request)
@@ -177,7 +195,7 @@ class PasswordResetServiceTest {
                 .usadoEn(null)
                 .build();
 
-        when(tokenRepository.findByTokenHash("token-expirado")).thenReturn(Optional.of(tokenEntity));
+        when(tokenRepository.findByTokenHash(PasswordResetService.hashear("token-expirado"))).thenReturn(Optional.of(tokenEntity));
 
         BadRequestException exception = assertThrows(BadRequestException.class, () ->
                 passwordResetService.restablecerPassword(request)

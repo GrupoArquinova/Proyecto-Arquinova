@@ -21,7 +21,7 @@ Está pensada para quien administra el sitio, no solo para quien programa. Aquí
 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `DB_SSL_MODE`, `JWT_SECRET`, `JWT_EXPIRATION` (3600000 = 1 hora),
 `CORS_ALLOWED_ORIGINS`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`,
 `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`,
-`FLYWAY_ENABLED` (false en Render), `APP_SITIO_URL` (cuando haya dominio).
+`FLYWAY_ENABLED` (false en Render), `APP_SITIO_URL` (enlace del correo de recuperación de contraseña y de la política de datos; si falta, usa el primer origen de `CORS_ALLOWED_ORIGINS`; cámbiala cuando haya dominio).
 **No** definir `APP_DOCS_PUBLICAS` (Swagger debe quedar cerrado). `METRICAS_TOKEN` solo si hay un Prometheus que lo use.
 Cuidado al pegar valores: sin espacios sobrantes y **sin los signos `< >` de las plantillas** (una vez `CLOUDINARY_CLOUD_NAME` quedó como `<dn3s7utod>` y las subidas fallaron con 401).
 
@@ -136,3 +136,8 @@ Cada vez que alguien con acceso deja el proyecto, o si una clave se pegó donde 
 - [ ] Respaldo automático en verde y una restauración de prueba hecha.
 - [ ] Monitoreo con alertas llegando a una persona que las atienda.
 - [ ] Cookie HttpOnly para la sesión (fase 2 del plan de endurecimiento), cuando el sitio y la API compartan dominio.
+
+## Códigos QR
+
+Los QR (`Documentacion/QR_Arquinova`) apuntan a enlaces cortos del sitio (`/qr/inicio`, `/qr/encanto`, `/qr/brochure`) y estos se redirigen a la página de inicio, a El Encanto y al PDF del brochure (`public/documentos/` del frontend). La regla está en `vercel.json` (`redirects`, redirección temporal): cambiar el destino de un QR ya impreso es editar esa regla y desplegar el frontend. Con dominio nuevo hay que volver a generar los QR (`generador/generar_qr.py`).
+

@@ -39,6 +39,13 @@ public class SolicitudContacto {
     @EqualsAndHashCode.Exclude
     private Lote lote;
 
+    /** Tipología (villa) por la que se pregunta, si la persona llegó desde una. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "casa_modelo_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private CasaModelo casaModelo;
+
     @Column(nullable = false, length = 150)
     private String nombre;
 

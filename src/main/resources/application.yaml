@@ -187,7 +187,7 @@ app:
   sitio-url: ${APP_SITIO_URL:}
   contacto:
     # Correo de la empresa que recibe el aviso de cada solicitud nueva
-    correo-aviso: ${APP_CONTACTO_CORREO_AVISO:grupoarquinova1@gmail.com}
+    correo-aviso: ${APP_CONTACTO_CORREO_AVISO:ga278737@gmail.com}
     # Confirmación automática al cliente que deja su correo (false para apagarla)
     confirmacion-activa: ${APP_CONTACTO_CONFIRMACION_ACTIVA:true}
     whatsapp: ${APP_CONTACTO_WHATSAPP:+57 316 865 3715}

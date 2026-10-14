@@ -53,7 +53,7 @@ class PasswordResetControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.mensaje").value("Se ha enviado un token de recuperación a tu correo"));
+                .andExpect(jsonPath("$.mensaje").value("Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña. Revisa tu bandeja de entrada y la carpeta de spam."));
 
         verify(passwordResetService, times(1)).solicitarRecuperacion(any(ForgotPasswordRequest.class));
     }
