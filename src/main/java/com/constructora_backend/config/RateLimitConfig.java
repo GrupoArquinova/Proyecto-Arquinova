@@ -25,12 +25,14 @@ public class RateLimitConfig {
     public static final int AUTH_LIMIT = 10;
     public static final int PUBLIC_LIMIT = 100;
     public static final int GENERAL_LIMIT = 500;
+    /** El asistente de IA gasta cuota de pago por uso: pocas preguntas por minuto y por IP. */
+    public static final int CHAT_LIMIT = 10;
     public static final Duration WINDOW = Duration.ofMinutes(1);
 
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
 
     public enum RateCategory {
-        AUTH, PUBLIC, GENERAL, NONE
+        AUTH, PUBLIC, GENERAL, CHAT, NONE
     }
 
     public Bucket resolveBucket(String clientIp, RateCategory category) {
@@ -47,6 +49,10 @@ public class RateLimitConfig {
 
         if (uri.startsWith("/api/solicitudes-contacto/publico")) {
             return RateCategory.PUBLIC;
+        }
+
+        if (uri.startsWith("/api/chat")) {
+            return RateCategory.CHAT;
         }
 
         if (uri.startsWith("/v3/api-docs") || uri.startsWith("/swagger-ui")) {
@@ -74,6 +80,10 @@ public class RateLimitConfig {
                     .capacity(GENERAL_LIMIT)
                     .refillGreedy(GENERAL_LIMIT, WINDOW)
                     .build();
+            case CHAT -> Bandwidth.builder()
+                    .capacity(CHAT_LIMIT)
+                    .refillGreedy(CHAT_LIMIT, WINDOW)
+                    .build();
             case NONE -> Bandwidth.builder()
                     .capacity(Long.MAX_VALUE)
                     .refillGreedy(Long.MAX_VALUE, Duration.ofDays(1))
@@ -100,6 +110,7 @@ public class RateLimitConfig {
         if (key.endsWith(":AUTH")) return AUTH_LIMIT;
         if (key.endsWith(":PUBLIC")) return PUBLIC_LIMIT;
         if (key.endsWith(":GENERAL")) return GENERAL_LIMIT;
+        if (key.endsWith(":CHAT")) return CHAT_LIMIT;
         return Long.MAX_VALUE;
     }
 }

@@ -101,6 +101,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/solicitudes-contacto/publico").permitAll()
+                        .requestMatchers("/api/chat/**").permitAll()
                         // Lecturas públicas del sitio. Los endpoints solo-admin dentro de estas rutas
                         // (p. ej. GET /api/lotes) se protegen con @PreAuthorize en el controlador.
                         .requestMatchers(HttpMethod.GET,

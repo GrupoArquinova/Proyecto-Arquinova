@@ -191,3 +191,17 @@ app:
     # Confirmación automática al cliente que deja su correo (false para apagarla)
     confirmacion-activa: ${APP_CONTACTO_CONFIRMACION_ACTIVA:true}
     whatsapp: ${APP_CONTACTO_WHATSAPP:+57 316 865 3715}
+
+# Asistente de IA (Gemini). La clave NUNCA va en este archivo: se define en la variable de entorno GEMINI_API_KEY
+# (en .env para trabajar en local y en el panel de Render en la demo). Sin clave, el chat responde que no está disponible.
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+    modelo: ${GEMINI_MODEL:gemini-3.1-flash-lite}
+    # Si el modelo principal falla (retirado o con alta demanda), se prueba este
+    modelo-respaldo: ${GEMINI_MODEL_RESPALDO:gemini-3.6-flash}
+    base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta/models}
+  # Tiempos máximos (segundos) y largo máximo de la pregunta (caracteres)
+  conexion-segundos: 5
+  respuesta-segundos: 25
+  pregunta-max: 500

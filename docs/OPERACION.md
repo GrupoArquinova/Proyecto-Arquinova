@@ -141,3 +141,19 @@ Cada vez que alguien con acceso deja el proyecto, o si una clave se pegó donde 
 
 Los QR (`Documentacion/QR_Arquinova`) apuntan a enlaces cortos del sitio (`/qr/inicio`, `/qr/encanto`, `/qr/brochure`) y estos se redirigen a la página de inicio, a El Encanto y al PDF del brochure (`public/documentos/` del frontend). La regla está en `vercel.json` (`redirects`, redirección temporal): cambiar el destino de un QR ya impreso es editar esa regla y desplegar el frontend. Con dominio nuevo hay que volver a generar los QR (`generador/generar_qr.py`).
 
+## Asistente de IA (chat del sitio)
+
+El chat usa la API de Gemini desde `AIService`. Variables de entorno (nunca en `application.yaml`):
+
+| Variable | Para qué |
+| --- | --- |
+| `GEMINI_API_KEY` | Clave de Google AI Studio. Sin ella el chat responde que no está disponible (503). En local va en `.env`; en la demo, en Render. |
+| `GEMINI_MODEL` | Opcional. Por defecto `gemini-3.1-flash-lite`. Google retira modelos con el tiempo: si el chat deja de responder, mira el log del backend (`Gemini respondió 404`) y cambia el modelo. La lista vigente se consulta con `GET https://generativelanguage.googleapis.com/v1beta/models` y la cabecera `x-goog-api-key`. |
+| `GEMINI_MODEL_RESPALDO` | Opcional. Por defecto `gemini-3.6-flash`. Se usa cuando el principal falla (retirado o con alta demanda). |
+
+- El bot responde solo con datos reales y públicos (proyectos publicados, villas, amenidades, ubicación y lotes por estado, guardados 10 minutos) y tiene prohibido dar precios, plazos o asesoría legal: para eso remite al WhatsApp.
+- `/api/chat` es público: 10 preguntas por minuto por IP y 500 caracteres por pregunta. Conviene fijar también una cuota o un presupuesto en la consola de Google para la clave.
+- Si la clave se expone (por ejemplo, se sube a un repositorio), hay que revocarla en Google AI Studio y crear otra.
+- Ante un fallo pasajero de Google (429 o 5xx) el backend reintenta hasta 3 veces por modelo y, si sigue fallando, prueba el modelo de respaldo; solo después el visitante ve el aviso de "no puedo responder". Si en el log aparecen muchos `Gemini respondió 429`, la cuota de la clave es insuficiente (los planes gratuitos tienen pocas peticiones por minuto): conviene activar la facturación en Google AI Studio.
+- El bot está instruido para interpretar mensajes con faltas de ortografía, sin tildes o abreviados ("q proyectos tienen", "donde keda").
+
