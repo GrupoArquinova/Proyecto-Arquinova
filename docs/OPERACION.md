@@ -157,3 +157,16 @@ El chat usa la API de Gemini desde `AIService`. Variables de entorno (nunca en `
 - Ante un fallo pasajero de Google (429 o 5xx) el backend reintenta hasta 3 veces por modelo y, si sigue fallando, prueba el modelo de respaldo; solo después el visitante ve el aviso de "no puedo responder". Si en el log aparecen muchos `Gemini respondió 429`, la cuota de la clave es insuficiente (los planes gratuitos tienen pocas peticiones por minuto): conviene activar la facturación en Google AI Studio.
 - El bot está instruido para interpretar mensajes con faltas de ortografía, sin tildes o abreviados ("q proyectos tienen", "donde keda").
 
+## Reportes (Excel y PDF)
+
+Pantalla: **Admin → Reportes**. Seis reportes (lotes, proyectos, etapas, estados comerciales, solicitudes y actividad), cada uno con
+sus filtros, y descarga en Excel (`/api/documentos/excel/<reporte>`) y en PDF (`/api/documentos/pdf/<reporte>`) con los mismos
+filtros. La ficha técnica de un proyecto es `/api/documentos/pdf/proyecto/{id}/ficha-tecnica`.
+
+- Por defecto los reportes cuentan solo lo **activo**, igual que los indicadores del panel; `incluirInactivos=true` agrega lo inactivo.
+- El Excel trae una hoja con el reporte (filtros de columna, encabezado fijo, totales que se ajustan al filtrar) y una hoja "Resumen".
+- El PDF no corta la lista: continúa en las hojas necesarias, con "Página X de N".
+- Los reportes no incluyen precios.
+- El código está en `documento/` (`Columna`, `ExcelReporte`, `PdfReporte`) y `ReporteDocumentoService`: cada reporte se define una sola vez y de
+  ahí salen sus dos formatos. `ReporteIntegracionTest` genera todos los archivos con la base real.
+

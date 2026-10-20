@@ -96,6 +96,22 @@ public class ReporteController {
         return ResponseEntity.ok(reporteService.consultarEstadisticasEstadosComerciales(filtro));
     }
 
+    // Reporte de etapas: lotes de cada etapa por estado comercial
+    @GetMapping("/etapas")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @Auditable(accion = "CONSULTAR_REPORTE_ETAPAS", entidad = "REPORTES", descripcion = "Consulta de reporte de etapas con sus lotes por estado")
+    @Operation(summary = "Reporte de etapas", description = "Por cada etapa: total de lotes, disponibles, reservados, vendidos y área total.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Reporte de etapas obtenido",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ReporteEtapaItemDTO.class)))),
+            @ApiResponse(responseCode = "401", description = "No autorizado - Token JWT ausente o inválido"),
+            @ApiResponse(responseCode = "403", description = "Acceso denegado - Requiere rol ADMINISTRADOR")
+    })
+    public ResponseEntity<List<ReporteEtapaItemDTO>> consultarReporteEtapas(
+            @Parameter(description = "Filtro opcional por proyecto") @ModelAttribute FiltroReporteDTO filtro) {
+        return ResponseEntity.ok(reporteService.consultarReporteEtapas(filtro));
+    }
+
     // RF26 - Reporte de solicitudes de contacto
     @GetMapping("/solicitudes")
     @PreAuthorize("hasRole('ADMINISTRADOR')")

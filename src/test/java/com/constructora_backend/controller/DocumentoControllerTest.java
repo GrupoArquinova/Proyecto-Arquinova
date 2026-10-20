@@ -56,6 +56,33 @@ class DocumentoControllerTest {
     }
 
     @Test
+    @DisplayName("GET /api/documentos/pdf/lotes - Descarga el reporte de lotes en PDF")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void descargarLotesPdf_Exitoso() throws Exception {
+        byte[] mockBytes = "PDF_CONTENT".getBytes();
+        when(documentoService.generarLotesPdf(any(FiltroReporteDTO.class))).thenReturn(mockBytes);
+
+        mockMvc.perform(get("/api/documentos/pdf/lotes").param("proyectoId", "1").param("incluirInactivos", "true"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=reporte_lotes.pdf"))
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(content().bytes(mockBytes));
+    }
+
+    @Test
+    @DisplayName("GET /api/documentos/excel/etapas - Descarga el reporte de etapas en Excel")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void descargarEtapasExcel_Exitoso() throws Exception {
+        byte[] mockBytes = "EXCEL_ETAPAS".getBytes();
+        when(documentoService.generarEtapasExcel(any(FiltroReporteDTO.class))).thenReturn(mockBytes);
+
+        mockMvc.perform(get("/api/documentos/excel/etapas"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=reporte_etapas.xlsx"))
+                .andExpect(content().bytes(mockBytes));
+    }
+
+    @Test
     @DisplayName("GET /api/documentos/excel/solicitudes - Descarga archivo Excel de solicitudes")
     @WithMockUser(roles = "ADMINISTRADOR")
     void descargarSolicitudesExcel_Exitoso() throws Exception {
