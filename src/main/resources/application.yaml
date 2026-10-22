@@ -87,11 +87,18 @@ server:
   # así que la API solo recibe JSON pequeño con URLs. Límite para formularios:
   tomcat:
     max-http-form-post-size: 1MB
+    # Lo que Tomcat lee y descarta de una petición rechazada, antes de cortar la conexión
+    max-swallow-size: 64KB
+  # Encabezados HTTP: 16 KB de sobra para un JWT y las cabeceras normales
+  max-http-request-header-size: 16KB
 
 jwt:
+  # Sin valor por defecto a propósito: la aplicación no arranca sin JWT_SECRET (mínimo 32 caracteres aleatorios)
   secret: ${JWT_SECRET}
   # Sesión corta (1 hora); el panel la renueva solo mientras la persona trabaja (POST /api/auth/renovar)
   expiration: ${JWT_EXPIRATION:3600000}
+  # Vida máxima absoluta de una sesión por más que se renueve: pasado ese tiempo hay que iniciar sesión de nuevo
+  sesion-maxima-horas: ${JWT_SESION_MAXIMA_HORAS:12}
 
 # ─── Documentación de la API (Swagger): cerrada por defecto; en desarrollo APP_DOCS_PUBLICAS=true ───
 springdoc:
@@ -126,7 +133,9 @@ management:
       enabled: ${HEALTH_RABBIT:false}
   endpoint:
     health:
+      # El detalle de la salud (base de datos, espacio en disco...) solo lo ve un ADMINISTRADOR; las sondas siguen siendo públicas
       show-details: when_authorized
+      roles: ADMINISTRADOR
       probes:
         enabled: true
       group:
@@ -151,7 +160,7 @@ info:
     version: 1.0.0
     description: API REST para la gestión de proyectos, lotes y usuarios del Grupo Arquinova
     java-version: 21
-    framework: Spring Boot 3.2.5
+    framework: Spring Boot 3.5.16
 
 # ─── Logging estructurado ──────────────────────────────────────────────────────
 logging:
@@ -183,14 +192,26 @@ app:
     docs-publicas: ${APP_DOCS_PUBLICAS:false}
     # Token con el que Prometheus lee /actuator/prometheus. Vacío = métricas cerradas para todos
     metricas-token: ${METRICAS_TOKEN:}
+    # Tope del cuerpo de cualquier petición a /api/** (bytes); más que eso responde 413
+    max-cuerpo-bytes: ${APP_MAX_CUERPO_BYTES:65536}
   # Dirección pública del sitio (por ejemplo https://www.midominio.com). Si se deja vacía, los correos no llevan enlaces al sitio.
   sitio-url: ${APP_SITIO_URL:}
   contacto:
-    # Correo de la empresa que recibe el aviso de cada solicitud nueva
-    correo-aviso: ${APP_CONTACTO_CORREO_AVISO:ga278737@gmail.com}
+    # Correo de la empresa que recibe el aviso de cada solicitud nueva. Sin valor por defecto: si falta, no se envía el aviso
+    correo-aviso: ${APP_CONTACTO_CORREO_AVISO:}
     # Confirmación automática al cliente que deja su correo (false para apagarla)
     confirmacion-activa: ${APP_CONTACTO_CONFIRMACION_ACTIVA:true}
+    # Tope global de confirmaciones del sitio por hora y por día (además de 1 por hora y por dirección)
+    confirmaciones-max-hora: ${APP_CONTACTO_CONFIRMACIONES_MAX_HORA:60}
+    confirmaciones-max-dia: ${APP_CONTACTO_CONFIRMACIONES_MAX_DIA:300}
     whatsapp: ${APP_CONTACTO_WHATSAPP:+57 316 865 3715}
+  # Versión de la política de tratamiento de datos que se guarda con cada consentimiento
+  legal:
+    version-politica: ${APP_LEGAL_VERSION_POLITICA:2026-10}
+  # Retención de datos personales (Ley 1581): meses que se conservan las solicitudes de contacto; 0 = no borrar nunca
+  retencion:
+    solicitudes-meses: ${APP_RETENCION_SOLICITUDES_MESES:24}
+    cron: ${APP_RETENCION_CRON:0 0 3 * * *}
 
 # Asistente de IA (Gemini). La clave NUNCA va en este archivo: se define en la variable de entorno GEMINI_API_KEY
 # (en .env para trabajar en local y en el panel de Render en la demo). Sin clave, el chat responde que no está disponible.
@@ -202,6 +223,9 @@ gemini:
     modelo-respaldo: ${GEMINI_MODEL_RESPALDO:gemini-3.6-flash}
     base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta/models}
   # Tiempos máximos (segundos) y largo máximo de la pregunta (caracteres)
+  # Consultas simultáneas máximas a la IA (si no hay cupo, 429 de inmediato) y cuota diaria global de preguntas (0 = sin tope)
+  concurrencia-maxima: ${GEMINI_CONCURRENCIA_MAXIMA:5}
+  cuota-diaria: ${GEMINI_CUOTA_DIARIA:1000}
   conexion-segundos: 5
-  respuesta-segundos: 25
+  respuesta-segundos: ${GEMINI_RESPUESTA_SEGUNDOS:10}
   pregunta-max: 500

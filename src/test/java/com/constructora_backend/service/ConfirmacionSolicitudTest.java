@@ -112,7 +112,9 @@ class ConfirmacionSolicitudTest {
         assertTrue(texto.contains("pronto nos comunicaremos contigo"));
         assertTrue(texto.contains("Proyecto: El Encanto"));
         assertTrue(texto.contains("Preguntaste por: Villa Samán"));
-        assertTrue(texto.contains("Tu mensaje: Quiero saber el precio"));
+        // El correo sale hacia una dirección escrita por un desconocido: no repite su mensaje
+        assertFalse(texto.contains("Quiero saber el precio"));
+        assertFalse(texto.contains("Tu mensaje"));
         assertTrue(texto.contains("WhatsApp: +57 300 000 0000"));
         assertTrue(texto.contains("Correo: empresa@test.com"));
         assertTrue(texto.contains("NIT 901.397.504-2"));
@@ -178,23 +180,47 @@ class ConfirmacionSolicitudTest {
     }
 
     @Test
-    void loQueEscribeLaPersonaSeEscapaEnElHtml() {
-        Datos d = datos("es", "<b>Proyecto</b>", "Villa \"X\"", "<script>alert(1)</script> & más");
+    void loQueSeMuestraSeEscapaEnElHtml() {
+        Datos d = datos("es", "<script>alert(1)</script> & más", "Villa \"X\"", null);
 
         String html = CorreoConfirmacionSolicitud.html(d);
 
         assertFalse(html.contains("<script>"));
-        assertFalse(html.contains("<b>Proyecto</b>"));
         assertTrue(html.contains("&lt;script&gt;alert(1)&lt;/script&gt; &amp; más"));
     }
 
     @Test
-    void unMensajeMuyLargoSeRecorta() {
-        String largo = "a".repeat(900);
+    void elMensajeDelVisitanteNuncaSeRepiteNiSiEsMuyLargoONiConEnlaces() {
+        String largo = "a".repeat(900) + " https://malo.example/phishing";
 
-        String texto = CorreoConfirmacionSolicitud.texto(datos("es", null, null, largo));
+        String texto = CorreoConfirmacionSolicitud.texto(datos("es", "El Encanto", null, largo));
+        String html = CorreoConfirmacionSolicitud.html(datos("es", "El Encanto", null, largo));
 
-        assertFalse(texto.contains("a".repeat(500)));
-        assertTrue(texto.contains("…"));
+        assertFalse(texto.contains("aaaa"));
+        assertFalse(html.contains("aaaa"));
+        assertFalse(texto.contains("malo.example"));
+        assertFalse(html.contains("malo.example"));
+    }
+
+    @Test
+    void elSaludoSoloLlevaUnNombreSaneadoSinEnlacesNiNumerosNiDirecciones() {
+        assertEquals("María José O'Neil-Pérez", CorreoConfirmacionSolicitud.nombreSeguro("  María   José O'Neil-Pérez "));
+        // Texto de ataque: enlace, correo, teléfono o saltos de línea no pasan al saludo
+        assertEquals("", CorreoConfirmacionSolicitud.nombreSeguro("Visita http://malo.example"));
+        assertEquals("", CorreoConfirmacionSolicitud.nombreSeguro("www.malo.example"));
+        assertEquals("", CorreoConfirmacionSolicitud.nombreSeguro("pepe@malo.example"));
+        assertEquals("Llama ya", CorreoConfirmacionSolicitud.nombreSeguro("Llama ya 3001234567"));
+        assertEquals("Ana Bcc evil", CorreoConfirmacionSolicitud.nombreSeguro("Ana\r\nBcc: evil"));
+        assertEquals("", CorreoConfirmacionSolicitud.nombreSeguro("<>@$$ 123"));
+        assertEquals("", CorreoConfirmacionSolicitud.nombreSeguro(null));
+        assertEquals(60, CorreoConfirmacionSolicitud.nombreSeguro("a".repeat(200)).length());
+    }
+
+    @Test
+    void siElNombreEsUnEnlaceElCorreoSaludaSinNombre() {
+        Datos d = new Datos("es", "http://malo.example/x", null, null, null, "+57 300 000 0000", "empresa@test.com", "");
+
+        assertTrue(CorreoConfirmacionSolicitud.texto(d).startsWith("Hola,"));
+        assertFalse(CorreoConfirmacionSolicitud.html(d).contains("malo.example"));
     }
 }

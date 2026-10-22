@@ -27,9 +27,11 @@ public class MultimediaRequestDTO {
 
     @NotBlank(message = "La URL del recurso es obligatorio")
     @Size(max = 1500, message = "La URL no puede superar los 1500 caracteres")
+    @UrlHttps
     private String url;
 
     @Size(max = 1500, message = "La URL en inglés no puede superar los 1500 caracteres")
+    @UrlHttps
     private String urlEn;
 
     private String nombreArchivo;

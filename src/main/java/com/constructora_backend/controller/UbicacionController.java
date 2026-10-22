@@ -3,12 +3,14 @@ package com.constructora_backend.controller;
 import com.constructora_backend.aspect.Auditable;
 import com.constructora_backend.dto.request.UbicacionRequestDTO;
 import com.constructora_backend.dto.response.UbicacionResponseDTO;
+import com.constructora_backend.security.UserSecurityHelper;
 import com.constructora_backend.service.UbicacionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 
@@ -27,30 +29,31 @@ public class UbicacionController {
 
     @GetMapping
     @Operation(summary = "Listar todas las ubicaciones", description = "Obtiene una lista de todas las ubicaciones registradas")
-    public ResponseEntity<List<UbicacionResponseDTO>> listarTodas() {
-        return ResponseEntity.ok(ubicacionService.listarTodas());
+    public ResponseEntity<List<UbicacionResponseDTO>> listarTodas(Authentication authentication) {
+        // Sin sesión de administrador solo las ubicaciones de proyectos publicados y activos
+        return ResponseEntity.ok(UserSecurityHelper.esAdmin(authentication) ? ubicacionService.listarTodas() : ubicacionService.listarPublicas());
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener ubicación por ID", description = "Obtiene los detalles de una ubicación específica")
-    public ResponseEntity<UbicacionResponseDTO> obtenerPorId(@PathVariable Long id) {
-        return ubicacionService.obtenerPorId(id)
+    public ResponseEntity<UbicacionResponseDTO> obtenerPorId(@PathVariable Long id, Authentication authentication) {
+        return (UserSecurityHelper.esAdmin(authentication) ? ubicacionService.obtenerPorId(id) : ubicacionService.obtenerPublicaPorId(id))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/proyecto/{proyectoId}")
     @Operation(summary = "Obtener ubicación por ID de proyecto", description = "Obtiene la ubicación asignada a un proyecto específico")
-    public ResponseEntity<UbicacionResponseDTO> obtenerPorProyectoId(@PathVariable Long proyectoId) {
-        return ubicacionService.obtenerPorProyectoId(proyectoId)
+    public ResponseEntity<UbicacionResponseDTO> obtenerPorProyectoId(@PathVariable Long proyectoId, Authentication authentication) {
+        return (UserSecurityHelper.esAdmin(authentication) ? ubicacionService.obtenerPorProyectoId(proyectoId) : ubicacionService.obtenerPublicaPorProyectoId(proyectoId))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/ciudad/{ciudad}")
     @Operation(summary = "Listar ubicaciones por ciudad", description = "Busca y retorna todas las ubicaciones en una ciudad dada")
-    public ResponseEntity<List<UbicacionResponseDTO>> listarPorCiudad(@PathVariable String ciudad) {
-        return ResponseEntity.ok(ubicacionService.listarPorCiudad(ciudad));
+    public ResponseEntity<List<UbicacionResponseDTO>> listarPorCiudad(@PathVariable String ciudad, Authentication authentication) {
+        return ResponseEntity.ok(UserSecurityHelper.esAdmin(authentication) ? ubicacionService.listarPorCiudad(ciudad) : ubicacionService.listarPublicasPorCiudad(ciudad));
     }
 
     @PostMapping

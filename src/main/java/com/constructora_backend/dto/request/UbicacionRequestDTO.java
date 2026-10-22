@@ -46,26 +46,32 @@ public class UbicacionRequestDTO {
     private BigDecimal longitud;
 
     @Size(max = 1000, message = "La URL de Google Maps no puede superar los 1000 caracteres")
+    @UrlHttps
     @Schema(description = "URL o iframe para Google Maps", example = "https://maps.google.com/?q=4.5388890,-75.6727780")
     private String googleMapsUrl;
 
     @Size(max = 1000, message = "La URL de Urbanismo no puede superar los 1000 caracteres")
+    @UrlHttps
     @Schema(description = "URL del plano de urbanismo o render general", example = "https://example.com/urbanismo/plano-general.jpg")
     private String urbanismoUrl;
 
     @Size(max = 1000, message = "La URL del plano de urbanismo en inglés no puede superar los 1000 caracteres")
+    @UrlHttps
     @Schema(description = "Plano de urbanismo con el texto en inglés (opcional)")
     private String urbanismoUrlEn;
 
     @Size(max = 1000, message = "La URL de vista aerea no puede superar los 1000 caracteres")
+    @UrlHttps
     @Schema(description = "URL del video o imagen aérea con dron", example = "https://example.com/videos/vista-aerea.mp4")
     private String vistaAereaUrl;
 
     @Size(max = 1000, message = "La URL de Recorrido 360 no puede superar los 1000 caracteres")
+    @UrlHttps
     @Schema(description = "URL del recorrido interactivo 360 virtual", example = "https://example.com/tours/recorrido360")
     private String recorrido360Url;
 
     @Size(max = 1000, message = "La Url de video como llegar no puede superar los 1000 caracteres")
+    @UrlHttps
     @Schema(description = "URL del video explicativo 'Cómo llegar'", example = "https://youtube.com/watch?v=example")
     private String videoComoLlegarUrl;
 }

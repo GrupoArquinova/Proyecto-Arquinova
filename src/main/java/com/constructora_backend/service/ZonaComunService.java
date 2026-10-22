@@ -39,10 +39,25 @@ public class ZonaComunService {
 
     @Transactional(readOnly = true)
     public List<ZonaComunResponseDTO> listarPublicadasYActivasPorProyectos(Long proyectoId) {
-        return zonaComunRepository.findByProyectoIdAndPublicadoTrueAndActivoTrue(proyectoId)
+        // También exige que el proyecto esté publicado y activo
+        return zonaComunRepository.findVisiblesAlPublicoPorProyecto(proyectoId)
                 .stream()
                 .map(zonaComunMapper::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    /** Detalle para el público: solo si la zona está publicada y activa y su proyecto también. */
+    @Transactional(readOnly = true)
+    public Optional<ZonaComunResponseDTO> obtenerPublicaPorId(Long id) {
+        return zonaComunRepository.findById(id)
+                .filter(ZonaComunService::visibleAlPublico)
+                .map(zonaComunMapper::toDTO);
+    }
+
+    /** Publicada, activa y dentro de un proyecto publicado y activo. */
+    static boolean visibleAlPublico(ZonaComun zona) {
+        return Boolean.TRUE.equals(zona.getPublicado()) && Boolean.TRUE.equals(zona.getActivo())
+                && zona.getProyecto() != null && zona.getProyecto().visibleAlPublico();
     }
 
     @Transactional(readOnly = true)

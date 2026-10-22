@@ -46,6 +46,40 @@ class AvisoSolicitudTest {
     }
 
     @Test
+    void elAsuntoNoAdmiteSaltosDeLineaNiCaracteresDeControl() {
+        Datos atacante = new Datos("Ana\r\nBcc: victima@x.com\u0000", "300", "a@x.com", null, "Villa\nX", null, "es", "m");
+
+        String asunto = CorreoAvisoSolicitud.asunto(atacante);
+
+        assertEquals("Nueva solicitud de contacto de: Ana Bcc: victima@x.com (Villa X)", asunto);
+        assertFalse(asunto.contains("\r"));
+        assertFalse(asunto.contains("\n"));
+        assertEquals("a b c", CorreoAvisoSolicitud.sinControl("a\r\n\t b \u0007 c"));
+    }
+
+    @Test
+    void elMensajeArmadoNoTieneCabecerasInyectadas() throws Exception {
+        JavaMailSender correo = mock(JavaMailSender.class);
+        when(correo.createMimeMessage()).thenAnswer(i -> new MimeMessage((Session) null));
+
+        MimeMessage m = servicio(correo).armarAvisoSolicitud("Ana\r\nBcc: victima@x.com", "300", "a@x.com", null, null, null, "hola", "es");
+
+        assertNull(m.getHeader("Bcc"));
+        assertFalse(m.getSubject().contains("\n"));
+    }
+
+    @Test
+    void sinCorreoDeAvisoConfiguradoNoSeEnviaNadaYNoFalla() {
+        JavaMailSender correo = mock(JavaMailSender.class);
+        EmailService s = servicio(correo);
+        ReflectionTestUtils.setField(s, "correoAviso", "");
+
+        assertDoesNotThrow(() -> s.enviarCorreoNuevaSolicitud("Ana", "300", null, null, null, null, null, "es"));
+
+        verify(correo, never()).send(any(MimeMessage.class));
+    }
+
+    @Test
     void siFallaElEnvioElErrorSePropaga() {
         JavaMailSender correo = mock(JavaMailSender.class);
         when(correo.createMimeMessage()).thenAnswer(i -> new MimeMessage((Session) null));

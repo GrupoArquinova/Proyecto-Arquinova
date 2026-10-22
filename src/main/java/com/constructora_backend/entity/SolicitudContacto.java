@@ -69,6 +69,13 @@ public class SolicitudContacto {
     @Column(name = "consentimiento_datos", nullable = false)
     private Boolean cosentimientoDatos = false;
 
+    /** Versión de la política de tratamiento de datos que la persona aceptó al enviar el formulario. */
+    @Column(name = "version_politica", length = 20)
+    private String versionPolitica;
+
+    @Column(name = "fecha_consentimiento")
+    private LocalDateTime fechaConsentimiento;
+
     @Column(length = 45)
     private String ip;
 

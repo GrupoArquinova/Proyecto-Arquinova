@@ -24,6 +24,8 @@ public class SolicitudContactoMapper {
         dto.setIdioma(entidad.getIdioma());
         dto.setMensaje(entidad.getMensaje());
         dto.setConsentimientoDatos(entidad.getCosentimientoDatos());
+        dto.setVersionPolitica(entidad.getVersionPolitica());
+        dto.setFechaConsentimiento(entidad.getFechaConsentimiento());
         dto.setIp(entidad.getIp());
         dto.setUserAgent(entidad.getUserAgent());
         dto.setAtendidaEn(entidad.getAtendidaEn());
@@ -78,10 +80,39 @@ public class SolicitudContactoMapper {
         entidad.setIdioma(dto.getIdioma() != null ? dto.getIdioma() : "es");
         entidad.setMensaje(dto.getMensaje());
         entidad.setCosentimientoDatos(dto.getConsentimientoDatos());
-        entidad.setIp(dto.getIp());
-        entidad.setUserAgent(dto.getUserAgent());
+        // La IP y el user-agent los fija el servicio a partir de la petición, nunca del cuerpo
 
         return entidad;
+    }
+
+    /**
+     * Lo que se le devuelve a quien envía el formulario público: su propio envío sin la IP, el user-agent ni nada de la
+     * gestión interna (observaciones, quién la atendió, la política aceptada).
+     */
+    public static SolicitudContactoResponseDTO sinDatosInternos(SolicitudContactoResponseDTO dto) {
+        if (dto == null) return null;
+        dto.setIp(null);
+        dto.setUserAgent(null);
+        dto.setObservacionesInternas(null);
+        dto.setAtendidaPorId(null);
+        dto.setAtendidaPorNombre(null);
+        dto.setAtendidaEn(null);
+        dto.setActualizadoEn(null);
+        dto.setVersionPolitica(null);
+        dto.setFechaConsentimiento(null);
+        return dto;
+    }
+
+    /** Respuesta para un envío descartado por el campo trampa: parece la de un envío normal, pero sin identificador. */
+    public static SolicitudContactoResponseDTO respuestaDescartada(SolicitudContactoPublicDTO dto) {
+        SolicitudContactoResponseDTO respuesta = new SolicitudContactoResponseDTO();
+        respuesta.setNombre(dto.getNombre() == null ? null : dto.getNombre().trim());
+        respuesta.setCorreo(limpiar(dto.getCorreo()));
+        respuesta.setTelefono(limpiar(dto.getTelefono()));
+        respuesta.setIdioma(dto.getIdioma() != null ? dto.getIdioma() : "es");
+        respuesta.setProyectoId(dto.getProyectoId());
+        respuesta.setConsentimientoDatos(dto.getConsentimientoDatos());
+        return respuesta;
     }
 
     /** Texto sin espacios sobrantes; un texto vacío se guarda como null. */

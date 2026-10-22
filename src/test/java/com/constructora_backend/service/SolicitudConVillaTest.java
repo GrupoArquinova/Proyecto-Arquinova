@@ -79,7 +79,7 @@ class SolicitudConVillaTest {
 
         assertEquals(11L, respuesta.getCasaModeloId());
         assertEquals("Villa Samán", respuesta.getCasaModeloNombre());
-        verify(emailService).enviarConfirmacionSolicitud("Ana", "ana@test.com", "El Encanto", "Villa Samán", "Quiero el precio", "es");
+        verify(emailService).enviarConfirmacionSolicitud("Ana", "ana@test.com", "El Encanto", "Villa Samán", null, "es");
         // El aviso al equipo también dice por qué villa preguntó (siempre en español)
         verify(emailService).enviarCorreoNuevaSolicitud(eq("Ana"), any(), eq("ana@test.com"), eq("El Encanto"), eq("Villa Samán"), any(), eq("Quiero el precio"), eq("es"));
     }
@@ -96,7 +96,7 @@ class SolicitudConVillaTest {
 
         servicio.crearPublica(dto);
 
-        verify(emailService).enviarConfirmacionSolicitud("Ana", "ana@test.com", "El Encanto", "Lot LT-101", "Quiero el precio", "en");
+        verify(emailService).enviarConfirmacionSolicitud("Ana", "ana@test.com", "El Encanto", "Lot LT-101", null, "en");
     }
 
     @Test
@@ -105,7 +105,7 @@ class SolicitudConVillaTest {
 
         servicio.crearPublica(pedido("es"));
 
-        verify(emailService).enviarConfirmacionSolicitud(eq("Ana"), eq("ana@test.com"), eq("El Encanto"), isNull(), eq("Quiero el precio"), eq("es"));
+        verify(emailService).enviarConfirmacionSolicitud(eq("Ana"), eq("ana@test.com"), eq("El Encanto"), isNull(), isNull(), eq("es"));
     }
 
     @Test

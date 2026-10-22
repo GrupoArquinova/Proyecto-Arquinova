@@ -2,11 +2,13 @@ package com.constructora_backend.controller;
 
 import com.constructora_backend.dto.request.CasaModeloRequestDTO;
 import com.constructora_backend.dto.response.CasaModeloResponseDTO;
+import com.constructora_backend.security.UserSecurityHelper;
 import com.constructora_backend.service.CasaModeloService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.constructora_backend.aspect.Auditable;
@@ -45,8 +47,9 @@ public class CasaModeloController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener casa modelo por ID", description = "Retorna los detalles de una casa modelo")
-    public ResponseEntity<CasaModeloResponseDTO> obtenerPorId(@PathVariable Long id) {
-        return casaModeloService.obtenerPorId(id)
+    public ResponseEntity<CasaModeloResponseDTO> obtenerPorId(@PathVariable Long id, Authentication authentication) {
+        // Sin sesión de administrador solo se devuelve lo publicado y activo (de un proyecto publicado y activo); si no, 404
+        return (UserSecurityHelper.esAdmin(authentication) ? casaModeloService.obtenerPorId(id) : casaModeloService.obtenerPublicaPorId(id))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

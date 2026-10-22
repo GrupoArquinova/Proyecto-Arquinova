@@ -17,6 +17,16 @@ public interface SolicitudContactoRepository extends JpaRepository<SolicitudCont
     @Query("update SolicitudContacto s set s.casaModelo = null where s.casaModelo.id = :casaModeloId")
     int quitarCasaModelo(@Param("casaModeloId") Long casaModeloId);
 
+    /** Borra las solicitudes creadas antes de la fecha (retención de datos). */
+    @Modifying
+    @Query("delete from SolicitudContacto s where s.creadoEn < :limite")
+    int eliminarAnterioresA(@Param("limite") java.time.LocalDateTime limite);
+
+    /** Borra las solicitudes de un correo (atención de solicitudes del titular de los datos). */
+    @Modifying
+    @Query("delete from SolicitudContacto s where lower(s.correo) = lower(:correo)")
+    int eliminarPorCorreo(@Param("correo") String correo);
+
     List<SolicitudContacto> findAllByOrderByCreadoEnDesc();
     List<SolicitudContacto> findByEstadoIdOrderByCreadoEnDesc(Integer estadoId);
     List<SolicitudContacto> findByProyectoIdOrderByCreadoEnDesc(Long proyectoId);

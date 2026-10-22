@@ -24,9 +24,16 @@ final class CorreoAvisoSolicitud {
     private CorreoAvisoSolicitud() {
     }
 
+    /** Asunto del aviso. El nombre lo escribe un visitante: se le quitan saltos de línea y caracteres de control (inyección de cabeceras). */
     static String asunto(Datos d) {
-        String sobre = vacio(d.interes()) ? "" : " (" + d.interes().trim() + ")";
-        return "Nueva solicitud de contacto de: " + d.nombre().trim() + sobre;
+        String sobre = vacio(d.interes()) ? "" : " (" + sinControl(d.interes()) + ")";
+        return "Nueva solicitud de contacto de: " + sinControl(d.nombre()) + sobre;
+    }
+
+    /** Cambia por un espacio cada salto de línea o carácter de control, junta los espacios y recorta. */
+    static String sinControl(String texto) {
+        if (texto == null) return "";
+        return texto.replaceAll("[\\r\\n\\p{Cntrl}]", " ").replaceAll(" {2,}", " ").trim();
     }
 
     /** Teléfono listo para el enlace de llamada: solo dígitos y el + inicial. */

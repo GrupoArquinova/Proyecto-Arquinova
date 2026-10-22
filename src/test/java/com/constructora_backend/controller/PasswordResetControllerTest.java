@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -59,20 +60,36 @@ class PasswordResetControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/auth/forgot-password - Debe devolver HTTP 500 cuando el servidor SMTP falla")
+    @DisplayName("POST /api/auth/forgot-password - Si el SMTP falla igual responde 200 con el mensaje genérico (no revela si la cuenta existe)")
     void forgotPassword_ErrorSMTP() throws Exception {
         ForgotPasswordRequest request = new ForgotPasswordRequest();
         request.setCorreo("test@constructora.com");
 
-        doThrow(new MailSendException("Fallo conexion SMTP"))
+        doThrow(new MailSendException("Fallo conexion SMTP smtp.gmail.com usuario secreto"))
                 .when(passwordResetService).solicitarRecuperacion(any(ForgotPasswordRequest.class));
 
         mockMvc.perform(post("/api/auth/forgot-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.error").value("Error al enviar el correo"))
-                .andExpect(jsonPath("$.mensaje").value("No se pudo entregar el correo de recuperación. Verifique las credenciales SMTP en el servidor."));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mensaje").value(PasswordResetController.MENSAJE_FORGOT))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("smtp"))));
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/forgot-password - Un error inesperado tampoco cambia la respuesta")
+    void forgotPassword_ErrorInesperado() throws Exception {
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setCorreo("test@constructora.com");
+
+        doThrow(new IllegalStateException("detalle interno"))
+                .when(passwordResetService).solicitarRecuperacion(any(ForgotPasswordRequest.class));
+
+        mockMvc.perform(post("/api/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mensaje").value(PasswordResetController.MENSAJE_FORGOT));
     }
 
     @Test
@@ -100,7 +117,7 @@ class PasswordResetControllerTest {
         request.setToken("invalid-token-uuid");
         request.setNuevaPassword("NuevaPassword123!");
 
-        doThrow(new RuntimeException("El token ha expirado"))
+        doThrow(new com.constructora_backend.exception.BadRequestException("detalle que no debe salir"))
                 .when(passwordResetService).restablecerPassword(any(ResetPasswordRequest.class));
 
         mockMvc.perform(post("/api/auth/reset-password")
@@ -108,6 +125,24 @@ class PasswordResetControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Error al restablecer contraseña"))
-                .andExpect(jsonPath("$.mensaje").value("El token ha expirado"));
+                .andExpect(jsonPath("$.mensaje").value(com.constructora_backend.service.PasswordResetService.MENSAJE_TOKEN_INVALIDO));
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/reset-password - Un fallo inesperado devuelve el mismo mensaje fijo, nunca el texto de la excepción")
+    void resetPassword_ErrorInesperadoNoFiltraDetalles() throws Exception {
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setToken("invalid-token-uuid");
+        request.setNuevaPassword("NuevaPassword123!");
+
+        doThrow(new RuntimeException("could not execute statement; SQL [update usuarios ...]"))
+                .when(passwordResetService).restablecerPassword(any(ResetPasswordRequest.class));
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value(com.constructora_backend.service.PasswordResetService.MENSAJE_TOKEN_INVALIDO))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("SQL"))));
     }
 }

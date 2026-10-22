@@ -2,11 +2,13 @@ package com.constructora_backend.controller;
 
 import com.constructora_backend.dto.request.ZonaComunRequestDTO;
 import com.constructora_backend.dto.response.ZonaComunResponseDTO;
+import com.constructora_backend.security.UserSecurityHelper;
 import com.constructora_backend.service.ZonaComunService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.constructora_backend.aspect.Auditable;
@@ -38,8 +40,9 @@ public class ZonaComunController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener zona común por ID", description = "Retorna los detalles de una zona común específica")
-    public ResponseEntity<ZonaComunResponseDTO> obtenerPorId(@PathVariable Long id) {
-        return zonaComunService.obtenerPorId(id)
+    public ResponseEntity<ZonaComunResponseDTO> obtenerPorId(@PathVariable Long id, Authentication authentication) {
+        // Sin sesión de administrador solo se devuelve lo publicado y activo (de un proyecto publicado y activo); si no, 404
+        return (UserSecurityHelper.esAdmin(authentication) ? zonaComunService.obtenerPorId(id) : zonaComunService.obtenerPublicaPorId(id))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

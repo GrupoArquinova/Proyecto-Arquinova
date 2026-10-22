@@ -30,6 +30,13 @@ public class UsuarioUpdateDTO {
     )
     private String password;
 
+    @Size(max = 128, message = "La contraseña actual no puede exceder 128 caracteres")
+    @Schema(
+            description = "Contraseña actual. Obligatoria cuando quien edita su propio perfil (sin ser administrador) cambia la contraseña.",
+            example = "PasswordActual123!"
+    )
+    private String passwordActual;
+
     @Schema(description = "ID del nuevo rol a asignar (opcional)", example = "2")
     private Long rolId;
 

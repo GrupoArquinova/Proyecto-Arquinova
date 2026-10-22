@@ -3,6 +3,7 @@ package com.constructora_backend.controller;
 import com.constructora_backend.aspect.Auditable;
 import com.constructora_backend.dto.request.ZonaComunImagenRequestDTO;
 import com.constructora_backend.dto.response.ZonaComunImagenResponseDTO;
+import com.constructora_backend.security.UserSecurityHelper;
 import com.constructora_backend.service.ZonaComunImagenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,14 +27,17 @@ public class ZonaComunImagenController {
 
     @Operation(summary = "Listar imágenes por zona común", description = "Obtiene todas las imágenes asociadas a una zona común ordenadas por orden")
     @GetMapping("/zona-comun/{zonaComunId}")
-    public ResponseEntity<List<ZonaComunImagenResponseDTO>> listarPorZonaComun(@PathVariable Long zonaComunId) {
-        return ResponseEntity.ok(imagenService.listarPorZonaComun(zonaComunId));
+    public ResponseEntity<List<ZonaComunImagenResponseDTO>> listarPorZonaComun(@PathVariable Long zonaComunId, Authentication authentication) {
+        // Sin sesión de administrador solo las imágenes de zonas publicadas y activas (de un proyecto publicado y activo)
+        return ResponseEntity.ok(UserSecurityHelper.esAdmin(authentication)
+                ? imagenService.listarPorZonaComun(zonaComunId)
+                : imagenService.listarPublicasPorZonaComun(zonaComunId));
     }
 
     @Operation(summary = "Obtener imagen por ID", description = "Obtiene los detalles de una imagen por su ID único")
     @GetMapping("/{id}")
-    public ResponseEntity<ZonaComunImagenResponseDTO> obtenerPorId(@PathVariable Long id) {
-        return imagenService.obtenerPorId(id)
+    public ResponseEntity<ZonaComunImagenResponseDTO> obtenerPorId(@PathVariable Long id, Authentication authentication) {
+        return (UserSecurityHelper.esAdmin(authentication) ? imagenService.obtenerPorId(id) : imagenService.obtenerPublicaPorId(id))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

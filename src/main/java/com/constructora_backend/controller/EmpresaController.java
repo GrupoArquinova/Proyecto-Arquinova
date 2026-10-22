@@ -17,6 +17,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -62,6 +63,7 @@ public class EmpresaController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "CREAR_EMPRESA", entidad = "EMPRESAS", descripcion = "Registro de nueva empresa constructora")
     @Operation(summary = "Crear una nueva empresa", description = "Registra una nueva empresa constructora en el sistema.")
     @ApiResponses(value = {
@@ -76,6 +78,7 @@ public class EmpresaController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "ACTUALIZAR_EMPRESA", entidad = "EMPRESAS", descripcion = "Actualización de datos institucionales de la empresa")
     @Operation(summary = "Actualizar empresa existente", description = "Modifica los datos institucionales o comerciales de una empresa según su ID.")
     @ApiResponses(value = {
@@ -93,6 +96,7 @@ public class EmpresaController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "DESACTIVAR_EMPRESA", entidad = "EMPRESAS", descripcion = "Desactivación lógica de empresa")
     @Operation(summary = "Desactivar una empresa", description = "Cambia el estado de la empresa a inactivo sin eliminar los registros históricos.")
     @ApiResponses(value = {

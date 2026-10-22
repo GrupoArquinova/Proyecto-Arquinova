@@ -51,10 +51,20 @@ public class CasaModeloService {
 
     @Transactional(readOnly = true)
     public List<CasaModeloResponseDTO> listarPublicadasYActivasPorProyecto(Long proyectoId) {
-        return casaModeloRepository.findByProyectoIdAndPublicadoTrueAndActivoTrue(proyectoId)
+        // También exige que el proyecto esté publicado y activo: una casa publicada de un proyecto oculto no se muestra
+        return casaModeloRepository.findVisiblesAlPublicoPorProyecto(proyectoId)
                 .stream()
                 .map(casaModeloMapper::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    /** Detalle para el público: solo si la casa está publicada y activa y su proyecto también. */
+    @Transactional(readOnly = true)
+    public Optional<CasaModeloResponseDTO> obtenerPublicaPorId(Long id) {
+        return casaModeloRepository.findById(id)
+                .filter(c -> Boolean.TRUE.equals(c.getPublicado()) && Boolean.TRUE.equals(c.getActivo())
+                        && c.getProyecto() != null && c.getProyecto().visibleAlPublico())
+                .map(casaModeloMapper::toDTO);
     }
 
     @Transactional(readOnly = true)

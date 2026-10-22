@@ -36,6 +36,23 @@ public class ZonaComunImagenService {
                 .collect(Collectors.toList());
     }
 
+    /** Imágenes para el público: solo si la zona común está publicada y activa y su proyecto también; si no, lista vacía. */
+    @Transactional(readOnly = true)
+    public List<ZonaComunImagenResponseDTO> listarPublicasPorZonaComun(Long zonaComunId) {
+        return zonaComunRepository.findById(zonaComunId)
+                .filter(ZonaComunService::visibleAlPublico)
+                .map(zona -> listarPorZonaComun(zonaComunId))
+                .orElseGet(List::of);
+    }
+
+    /** Detalle para el público: solo si la zona de la imagen es visible (publicada, activa, en un proyecto publicado y activo). */
+    @Transactional(readOnly = true)
+    public Optional<ZonaComunImagenResponseDTO> obtenerPublicaPorId(Long id) {
+        return imagenRepository.findById(id)
+                .filter(i -> i.getZonaComun() != null && ZonaComunService.visibleAlPublico(i.getZonaComun()))
+                .map(imagenMapper::toDTO);
+    }
+
     @Transactional(readOnly = true)
     public Optional<ZonaComunImagenResponseDTO> obtenerPorId(Long id) {
         return imagenRepository.findById(id)

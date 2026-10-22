@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
         if (correlationId == null || correlationId.isBlank()) {
             correlationId = request.getHeader(CorrelationIdFilter.CORRELATION_ID_HEADER);
         }
-        return correlationId != null ? correlationId : "N/A";
+        return CorrelationIdFilter.esValido(correlationId) ? correlationId : "N/A";
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -59,6 +59,19 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ErrorResponseDTO> handleDuplicateResource(DuplicateResourceException ex, HttpServletRequest request) {
+        ErrorResponseDTO errorResponse = ErrorResponseDTO.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                .mensaje(ex.getMessage())
+                .path(request.getRequestURI())
+                .correlationId(resolveCorrelationId(request))
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponseDTO> handleConflict(ConflictException ex, HttpServletRequest request) {
         ErrorResponseDTO errorResponse = ErrorResponseDTO.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
@@ -139,6 +152,20 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
                 .mensaje("El parámetro '" + ex.getName() + "' tiene un formato inválido")
+                .path(request.getRequestURI())
+                .correlationId(resolveCorrelationId(request))
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    /** JSON mal formado o de otro tipo: 400 con un texto fijo (el detalle del parser no sale al cliente). */
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponseDTO> handleMensajeNoLegible(org.springframework.http.converter.HttpMessageNotReadableException ex, HttpServletRequest request) {
+        ErrorResponseDTO errorResponse = ErrorResponseDTO.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .mensaje("El cuerpo de la petición no es válido")
                 .path(request.getRequestURI())
                 .correlationId(resolveCorrelationId(request))
                 .build();

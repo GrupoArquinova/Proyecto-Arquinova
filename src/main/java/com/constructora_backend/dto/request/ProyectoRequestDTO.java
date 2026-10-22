@@ -63,8 +63,7 @@ public class ProyectoRequestDTO {
 
     @Schema(description = "URL de la imagen principal del proyecto (Cloudinary)", example = "https://res.cloudinary.com/...")
     @Size(max = 1000, message = "La URL de la imagen no puede superar los 1000 caracteres")
-    @Pattern(regexp = "^$|^https?://\\S+$",
-             message = "La imagen debe ser una URL http(s) (por ejemplo de Cloudinary), no un archivo en Base64")
+    @UrlHttps(message = "La imagen debe ser una URL https (por ejemplo de Cloudinary), no un archivo en Base64")
     private String imagenUrl;
 
     @Schema(description = "Fecha estimada o real de lanzamiento (YYYY-MM-DD)", example = "2026-11-01")

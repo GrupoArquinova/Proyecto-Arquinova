@@ -33,8 +33,8 @@ public class EmailService {
     @Value("${spring.mail.username:noreply@constructora.com}")
     private String remitente;
 
-    /** Correo de la empresa que recibe el aviso de cada solicitud nueva (configurable con APP_CONTACTO_CORREO_AVISO). */
-    @Value("${app.contacto.correo-aviso:ga278737@gmail.com}")
+    /** Correo de la empresa que recibe el aviso de cada solicitud nueva (APP_CONTACTO_CORREO_AVISO); sin valor no se envía el aviso. */
+    @Value("${app.contacto.correo-aviso:}")
     private String correoAviso;
 
     /** Si es false no se envía la confirmación al cliente (APP_CONTACTO_CONFIRMACION_ACTIVA). */
@@ -89,7 +89,7 @@ public class EmailService {
                         RabbitMQConfig.ROUTING_KEY_EMAIL,
                         evento
                 );
-                log.info("Evento de correo encolado exitosamente en RabbitMQ para: {}", destino);
+                log.info("Evento de correo encolado exitosamente en RabbitMQ para: {}", enmascarar(destino));
                 return;
             } catch (Exception ex) {
                 log.warn("Fallo al conectar con RabbitMQ, ejecutando envío SMTP directo como fallback: {}", ex.getMessage());
@@ -107,11 +107,20 @@ public class EmailService {
     public void enviarCorreoDirecto(String destino, String token) {
         try {
             mailSender.send(armarCorreoRecuperacion(destino, enlaceRecuperacion(token)));
-            log.info("Correo de recuperación enviado exitosamente a {}", destino);
+            log.info("Correo de recuperación enviado exitosamente a {}", enmascarar(destino));
         } catch (MailException e) {
-            log.error("Error al enviar el correo de recuperación a {}: {}", destino, e.getMessage());
+            log.error("Error al enviar el correo de recuperación a {}: {}", enmascarar(destino), e.getMessage());
             throw e;
         }
+    }
+
+    /** Correo para los registros: conserva la primera letra y el dominio ("a***@gmail.com") para no guardar direcciones completas. */
+    static String enmascarar(String correo) {
+        if (correo == null || correo.isBlank()) return "(sin correo)";
+        String limpio = correo.trim();
+        int arroba = limpio.indexOf('@');
+        if (arroba < 1) return "***";
+        return limpio.charAt(0) + "***" + limpio.substring(arroba);
     }
 
     /** Enlace que lleva al formulario de nueva contraseña: dirección pública del sitio (APP_SITIO_URL) o, si falta, el primer origen permitido. */
@@ -173,9 +182,13 @@ public class EmailService {
     @CircuitBreaker(name = "emailService", fallbackMethod = "enviarCorreoNotificacionFallback")
     public void enviarCorreoNuevaSolicitud(String nombreCliente, String telefono, String correoCliente, String proyecto,
                                            String interes, String servicio, String mensajeCliente, String idioma) {
+        if (correoAviso == null || correoAviso.isBlank()) {
+            log.warn("No se envió el aviso de la solicitud: falta configurar APP_CONTACTO_CORREO_AVISO");
+            return;
+        }
         try {
             mailSender.send(armarAvisoSolicitud(nombreCliente, telefono, correoCliente, proyecto, interes, servicio, mensajeCliente, idioma));
-            log.info("Correo de notificación de solicitud enviado exitosamente a la empresa para el cliente: {}", nombreCliente);
+            log.info("Correo de notificación de solicitud enviado exitosamente a la empresa");
         } catch (MailException e) {
             log.error("Error al enviar el correo de notificación de solicitud: {}", e.getMessage());
             throw e;
@@ -258,14 +271,14 @@ public class EmailService {
      */
     public void enviarCorreoFallback(String destino, String token, Throwable throwable) {
         log.error("CIRCUIT BREAKER ACTIVADO [emailService]: No fue posible enviar correo de recuperación a {} debido a: {}. Notificación preservada para reintento.",
-                destino, throwable.getMessage());
+                enmascarar(destino), throwable.getMessage());
     }
 
     /**
      * Fallback de Circuit Breaker para el envío de notificaciones corporativas.
      */
     public void enviarCorreoNotificacionFallback(String nombreCliente, String telefono, String correoCliente, String proyecto, String interes, String servicio, String mensajeCliente, String idioma, Throwable throwable) {
-        log.error("CIRCUIT BREAKER ACTIVADO [emailService]: No fue posible enviar la notificación de contacto para {} debido a: {}.",
-                nombreCliente, throwable.getMessage());
+        log.error("CIRCUIT BREAKER ACTIVADO [emailService]: No fue posible enviar la notificación de contacto debido a: {}.",
+                throwable.getMessage());
     }
 }

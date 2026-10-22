@@ -15,8 +15,19 @@ import java.util.*;
 @Service
 public class ReporteService {
 
+    /** Máximo de filas que devuelve un reporte (y por tanto un Excel o PDF): si hay más, se pide afinar los filtros. */
+    public static final int MAX_FILAS = 50_000;
+
     @PersistenceContext
     private EntityManager entityManager;
+
+    /** Lanza un error claro si la consulta trajo más filas que el tope (se pide una más para saberlo). */
+    static void verificarTope(List<?> filas) {
+        if (filas.size() > MAX_FILAS) {
+            throw new com.constructora_backend.exception.BadRequestException(
+                    "El reporte supera el máximo de " + MAX_FILAS + " filas. Acota los filtros (proyecto, estado o fechas) e inténtalo de nuevo.");
+        }
+    }
 
     // ============================================================
     // RF22 - DASHBOARD DE INDICADORES
@@ -104,8 +115,12 @@ public class ReporteService {
         Query query = entityManager.createQuery(jpql.toString());
         params.forEach(query::setParameter);
 
+        // Tope de filas: una consulta sin filtros sobre una tabla enorme no debe agotar la memoria del servidor
+        query.setMaxResults(MAX_FILAS + 1);
+
         @SuppressWarnings("unchecked")
         List<ReporteProyectoItemDTO> resultado = query.getResultList();
+        verificarTope(resultado);
         return resultado;
     }
 
@@ -152,8 +167,12 @@ public class ReporteService {
         Query query = entityManager.createQuery(jpql.toString());
         params.forEach(query::setParameter);
 
+        // Tope de filas: una consulta sin filtros sobre una tabla enorme no debe agotar la memoria del servidor
+        query.setMaxResults(MAX_FILAS + 1);
+
         @SuppressWarnings("unchecked")
         List<ReporteLoteItemDTO> resultado = query.getResultList();
+        verificarTope(resultado);
         return resultado;
     }
 
@@ -320,8 +339,12 @@ public class ReporteService {
         Query query = entityManager.createQuery(jpql.toString());
         params.forEach(query::setParameter);
 
+        // Tope de filas: una consulta sin filtros sobre una tabla enorme no debe agotar la memoria del servidor
+        query.setMaxResults(MAX_FILAS + 1);
+
         @SuppressWarnings("unchecked")
         List<ReporteSolicitudItemDTO> resultado = query.getResultList();
+        verificarTope(resultado);
         return resultado;
     }
 
@@ -355,8 +378,12 @@ public class ReporteService {
         Query query = entityManager.createQuery(jpql.toString());
         params.forEach(query::setParameter);
 
+        // Tope de filas: una consulta sin filtros sobre una tabla enorme no debe agotar la memoria del servidor
+        query.setMaxResults(MAX_FILAS + 1);
+
         @SuppressWarnings("unchecked")
         List<ReporteActividadItemDTO> resultado = query.getResultList();
+        verificarTope(resultado);
         return resultado;
     }
 }

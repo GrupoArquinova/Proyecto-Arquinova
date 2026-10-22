@@ -7,12 +7,14 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Texto y HTML del correo que recibe quien deja una solicitud en el sitio: confirma lo que preguntó
- * (proyecto, villa o lote y su mensaje) y deja los medios para escribir a la empresa. Sale en español o en inglés.
+ * (proyecto, villa o lote) y deja los medios para escribir a la empresa. Sale en español o en inglés. Es un correo que
+ * sale hacia una dirección escrita por un visitante cualquiera: NO repite su mensaje ni otro texto libre, y el saludo
+ * solo lleva el nombre ya saneado (sin números, enlaces ni direcciones).
  * Todo lo que escribe la persona se escapa antes de ir al HTML.
  */
 final class CorreoConfirmacionSolicitud {
 
-    /** Datos que se muestran en el correo; proyecto, interés y mensaje pueden venir vacíos. */
+    /** Datos del correo; proyecto e interés (salen de la base de datos) pueden venir vacíos. El mensaje del visitante no se muestra: es texto libre. */
     record Datos(String idioma, String nombre, String proyecto, String interes, String mensaje,
                  String whatsapp, String correoEmpresa, String enlacePolitica) {
 
@@ -21,7 +23,7 @@ final class CorreoConfirmacionSolicitud {
         }
     }
 
-    private static final int MAX_MENSAJE = 400;
+    private static final int MAX_NOMBRE = 60;
 
     private CorreoConfirmacionSolicitud() {
     }
@@ -55,7 +57,6 @@ final class CorreoConfirmacionSolicitud {
         StringBuilder resumen = new StringBuilder();
         if (!vacio(d.proyecto())) resumen.append("- ").append(en ? "Project: " : "Proyecto: ").append(d.proyecto().trim()).append("\n");
         if (!vacio(d.interes())) resumen.append("- ").append(en ? "You asked about: " : "Preguntaste por: ").append(d.interes().trim()).append("\n");
-        if (!vacio(d.mensaje())) resumen.append("- ").append(en ? "Your message: " : "Tu mensaje: ").append(recortar(d.mensaje())).append("\n");
         if (resumen.length() > 0) {
             t.append(en ? "Summary of your request:\n" : "Resumen de tu solicitud:\n").append(resumen).append("\n");
         }
@@ -94,7 +95,6 @@ final class CorreoConfirmacionSolicitud {
         StringBuilder filas = new StringBuilder();
         if (!vacio(d.proyecto())) filas.append(fila(en ? "Project" : "Proyecto", d.proyecto()));
         if (!vacio(d.interes())) filas.append(fila(en ? "You asked about" : "Preguntaste por", d.interes()));
-        if (!vacio(d.mensaje())) filas.append(fila(en ? "Your message" : "Tu mensaje", recortar(d.mensaje())));
         if (filas.length() > 0) {
             h.append("<table style=\"width:100%;border-collapse:collapse;background:#f4f6f6;border-radius:8px;margin:0 0 24px;\">").append(filas).append("</table>");
         }
@@ -135,14 +135,26 @@ final class CorreoConfirmacionSolicitud {
     }
 
     private static String saludo(Datos d) {
-        boolean tieneNombre = !vacio(d.nombre());
-        if (d.ingles()) return tieneNombre ? "Hello " + d.nombre().trim() + "," : "Hello,";
-        return tieneNombre ? "Hola " + d.nombre().trim() + "," : "Hola,";
+        String nombre = nombreSeguro(d.nombre());
+        boolean tieneNombre = !nombre.isEmpty();
+        if (d.ingles()) return tieneNombre ? "Hello " + nombre + "," : "Hello,";
+        return tieneNombre ? "Hola " + nombre + "," : "Hola,";
     }
 
-    private static String recortar(String mensaje) {
-        String limpio = mensaje.trim().replaceAll("\\s+", " ");
-        return limpio.length() > MAX_MENSAJE ? limpio.substring(0, MAX_MENSAJE).trim() + "…" : limpio;
+    /**
+     * El nombre lo escribió un desconocido y el correo sale hacia otra persona: solo se deja un nombre de letras, espacios,
+     * apóstrofos, puntos y guiones. Si parece una dirección o un enlace, o queda vacío, se saluda sin nombre.
+     */
+    static String nombreSeguro(String nombre) {
+        if (nombre == null) return "";
+        String minusculas = nombre.toLowerCase(java.util.Locale.ROOT);
+        if (minusculas.contains("http") || minusculas.contains("www") || minusculas.contains("://")
+                || minusculas.contains("@") || minusculas.contains(".com") || minusculas.contains(".co/")) {
+            return "";
+        }
+        String limpio = nombre.replaceAll("[^\\p{L}\\p{M} '.\\-]", " ").replaceAll("\\s+", " ").trim();
+        if (limpio.length() > MAX_NOMBRE) limpio = limpio.substring(0, MAX_NOMBRE).trim();
+        return limpio;
     }
 
     private static String esc(String texto) {

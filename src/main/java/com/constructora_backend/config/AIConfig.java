@@ -15,7 +15,7 @@ public class AIConfig {
     @Bean("geminiRestTemplate")
     public RestTemplate geminiRestTemplate(RestTemplateBuilder builder,
                                            @Value("${gemini.conexion-segundos:5}") long conexionSegundos,
-                                           @Value("${gemini.respuesta-segundos:25}") long respuestaSegundos) {
+                                           @Value("${gemini.respuesta-segundos:10}") long respuestaSegundos) {
         return builder
                 .setConnectTimeout(Duration.ofSeconds(conexionSegundos))
                 .setReadTimeout(Duration.ofSeconds(respuestaSegundos))

@@ -107,9 +107,69 @@ class JwtUtilsTest {
         UserDetails admin = new User("admin@constructora.com", "x",
                 java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMINISTRADOR")));
 
-        String token = jwtUtils.generarTokenRenovado(admin);
+        String token = jwtUtils.generarTokenRenovado(admin, System.currentTimeMillis());
 
         assertTrue(jwtUtils.validarToken(token));
         assertEquals("admin@constructora.com", jwtUtils.obtenerCorreoDelToken(token));
+    }
+
+    private UserDetails admin() {
+        return new User("admin@constructora.com", "x",
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMINISTRADOR")));
+    }
+
+    @Test
+    @DisplayName("El token lleva el instante de emisión (iat) y el inicio de la sesión")
+    void tokenLlevaEmisionEInicioDeSesion() {
+        long antes = System.currentTimeMillis() - 1_000;
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getPrincipal()).thenReturn(admin());
+
+        String token = jwtUtils.generarToken(authentication);
+
+        assertTrue(jwtUtils.obtenerEmisionMillis(token) >= antes);
+        assertTrue(jwtUtils.obtenerSesionInicioMillis(token) >= antes);
+    }
+
+    @Test
+    @DisplayName("Al renovar se conserva el inicio de la sesión original aunque el token sea nuevo")
+    void renovarConservaElInicioDeSesion() {
+        long inicio = System.currentTimeMillis() - 5 * 3_600_000L;
+
+        String renovado = jwtUtils.generarTokenRenovado(admin(), inicio);
+
+        assertEquals(inicio, jwtUtils.obtenerSesionInicioMillis(renovado));
+        assertTrue(jwtUtils.obtenerEmisionMillis(renovado) > inicio);
+    }
+
+    @Test
+    @DisplayName("Una sesión supera su vida máxima (12 horas por defecto, configurable)")
+    void sesionAgotadaSegunLaVidaMaxima() {
+        long ahora = System.currentTimeMillis();
+
+        assertFalse(jwtUtils.sesionAgotada(ahora - 11 * 3_600_000L));
+        assertTrue(jwtUtils.sesionAgotada(ahora - 13 * 3_600_000L));
+
+        ReflectionTestUtils.setField(jwtUtils, "sesionMaximaHoras", 1L);
+        assertTrue(jwtUtils.sesionAgotada(ahora - 2 * 3_600_000L));
+    }
+
+    @Test
+    @DisplayName("Un token anterior a la fecha token_valido_desde del usuario ya no se acepta; uno posterior sí")
+    void tokenValidoDesdeRevocaLosAnteriores() {
+        long emision = System.currentTimeMillis() - 60_000;
+        UsuarioPrincipal conCambioReciente = new UsuarioPrincipal("a@x.com", "x", true,
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_X")),
+                java.time.LocalDateTime.now());
+        UsuarioPrincipal conCambioViejo = new UsuarioPrincipal("a@x.com", "x", true,
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_X")),
+                java.time.LocalDateTime.now().minusHours(2));
+        UsuarioPrincipal sinCambios = new UsuarioPrincipal("a@x.com", "x", true,
+                java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_X")), null);
+
+        assertFalse(UsuarioPrincipal.tokenAceptado(conCambioReciente, emision));
+        assertTrue(UsuarioPrincipal.tokenAceptado(conCambioViejo, emision));
+        assertTrue(UsuarioPrincipal.tokenAceptado(sinCambios, emision));
+        assertTrue(UsuarioPrincipal.tokenAceptado(admin(), emision), "un UserDetails sin ese dato no se restringe");
     }
 }

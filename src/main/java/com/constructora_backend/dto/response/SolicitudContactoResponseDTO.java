@@ -23,6 +23,9 @@ public class SolicitudContactoResponseDTO {
     private String idioma;
     private String mensaje;
     private Boolean consentimientoDatos;
+    /** Versión de la política de datos aceptada y momento del consentimiento. */
+    private String versionPolitica;
+    private LocalDateTime fechaConsentimiento;
     private String ip;
     private String userAgent;
     private Long atendidaPorId;
