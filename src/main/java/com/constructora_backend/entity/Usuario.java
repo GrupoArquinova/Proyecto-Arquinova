@@ -37,6 +37,10 @@ public class Usuario {
     @Column(name = "ultimo_acceso_en")
     private LocalDateTime ultimoAccesoEn;
 
+    /** Los tokens JWT emitidos antes de este instante ya no valen (cambio de contraseña, de rol o cuenta desactivada). */
+    @Column(name = "token_valido_desde")
+    private LocalDateTime tokenValidoDesde;
+
     @Column(name = "creado_en", nullable = false, insertable = false, updatable = false)
     private LocalDateTime creadoEn;
 

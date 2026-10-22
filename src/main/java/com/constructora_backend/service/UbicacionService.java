@@ -40,6 +40,44 @@ public class UbicacionService {
                 .collect(Collectors.toList());
     }
 
+    // ───── Lecturas para el público: solo la ubicación de proyectos publicados y activos ─────
+
+    private static boolean visibleAlPublico(Ubicacion ubicacion) {
+        return ubicacion.getProyecto() != null && ubicacion.getProyecto().visibleAlPublico();
+    }
+
+    @Transactional(readOnly = true)
+    public List<UbicacionResponseDTO> listarPublicas() {
+        return ubicacionRepository.findAll()
+                .stream()
+                .filter(UbicacionService::visibleAlPublico)
+                .map(ubicacionMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UbicacionResponseDTO> obtenerPublicaPorId(Long id) {
+        return ubicacionRepository.findById(id)
+                .filter(UbicacionService::visibleAlPublico)
+                .map(ubicacionMapper::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UbicacionResponseDTO> obtenerPublicaPorProyectoId(Long proyectoId) {
+        return ubicacionRepository.findByProyectoId(proyectoId)
+                .filter(UbicacionService::visibleAlPublico)
+                .map(ubicacionMapper::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UbicacionResponseDTO> listarPublicasPorCiudad(String ciudad) {
+        return ubicacionRepository.findByCiudadIgnoreCase(ciudad)
+                .stream()
+                .filter(UbicacionService::visibleAlPublico)
+                .map(ubicacionMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
     public Optional<UbicacionResponseDTO> obtenerPorId(Long id) {
         return ubicacionRepository.findById(id)
                 .map(ubicacionMapper::toDto);

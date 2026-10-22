@@ -39,10 +39,12 @@ public class CasaModeloRequestDTO {
     private Byte numeroBanos;
 
     @Size(max = 1000, message = "La URL del tour virtual no puede superar los 1000 caracteres")
+    @UrlHttps
     @Schema(description = "URL para acceder al tour virtual", example = "https://tourvirtual.com/casaA")
     private String tourVirtualUrl;
 
     @Size(max = 1000, message = "La URL del plano no puede superar los 1000 caracteres")
+    @UrlHttps
     @Schema(description = "URL del plano arquitectónico", example = "https://planos.com/casaA.pdf")
     private String planoUrl;
 

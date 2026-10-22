@@ -71,6 +71,11 @@ public class Proyecto {
     @Column(nullable = false)
     private Boolean activo = true;
 
+    /** true si el sitio público puede mostrar este proyecto y lo que cuelga de él: publicado y activo. */
+    public boolean visibleAlPublico() {
+        return Boolean.TRUE.equals(publicado) && Boolean.TRUE.equals(activo);
+    }
+
     @Column(name = "fecha_lanzamiento")
     private LocalDate fechaLanzamiento;
 

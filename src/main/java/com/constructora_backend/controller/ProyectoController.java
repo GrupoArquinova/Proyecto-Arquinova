@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -126,6 +127,7 @@ public class ProyectoController {
     // ───── CREAR ─────
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "CREAR_PROYECTO", entidad = "PROYECTOS", descripcion = "Registro de nuevo proyecto inmobiliario")
     @Operation(summary = "Crear un nuevo proyecto",
                description = "Registra un nuevo proyecto inmobiliario en el sistema. El slug debe ser único por empresa.")
@@ -144,6 +146,7 @@ public class ProyectoController {
     // ───── ACTUALIZAR ─────
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "ACTUALIZAR_PROYECTO", entidad = "PROYECTOS", descripcion = "Actualización de proyecto inmobiliario")
     @Operation(summary = "Actualizar proyecto existente",
                description = "Modifica los datos de un proyecto existente según su ID.")
@@ -164,6 +167,7 @@ public class ProyectoController {
     // ───── DESACTIVAR ─────
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "DESACTIVAR_PROYECTO", entidad = "PROYECTOS", descripcion = "Desactivación lógica de proyecto")
     @Operation(summary = "Desactivar un proyecto",
                description = "Realiza la desactivación lógica (baja) de un proyecto inmobiliario sin eliminar su historial.")

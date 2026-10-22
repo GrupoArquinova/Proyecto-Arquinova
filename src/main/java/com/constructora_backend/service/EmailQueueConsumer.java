@@ -25,12 +25,12 @@ public class EmailQueueConsumer {
             return;
         }
 
-        log.info("Mensaje recibido desde RabbitMQ para destinatario: {}", evento.getDestinatario());
+        log.info("Mensaje recibido desde RabbitMQ para destinatario: {}", EmailService.enmascarar(evento.getDestinatario()));
         try {
             emailService.enviarCorreoDirecto(evento.getDestinatario(), evento.getToken());
         } catch (Exception ex) {
             log.error("Fallo al procesar evento de correo para {}. RabbitMQ enviará a DLQ si excede reintentos: {}",
-                    evento.getDestinatario(), ex.getMessage());
+                    EmailService.enmascarar(evento.getDestinatario()), ex.getMessage());
             throw ex; // Permite que RabbitMQ gestione el reintento o desvío a DLQ
         }
     }

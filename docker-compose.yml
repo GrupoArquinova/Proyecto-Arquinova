@@ -5,7 +5,7 @@ services:
     container_name: constructora-mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Falta MYSQL_ROOT_PASSWORD - definela en el archivo .env}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-constructora_db}
       # OPCIONAL: Si deseas crear un usuario adicional que no sea root:
       # MYSQL_USER: constructora_user
@@ -53,7 +53,7 @@ services:
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD - definela en el archivo .env}
     ports:
       - "${RABBITMQ_PORT:-5672}:5672"
       - "${RABBITMQ_MGMT_PORT:-15672}:15672"
@@ -82,14 +82,14 @@ services:
       DB_PORT: 3306
       DB_NAME: ${DB_NAME:-constructora_web}
       DB_USERNAME: ${DB_USERNAME:-constructora_user}
-      DB_PASSWORD: ${DB_PASSWORD:-constructora_pass}
+      DB_PASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD - definela en el archivo .env}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?Falta RABBITMQ_PASSWORD - definela en el archivo .env}
       JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET - definela en el archivo .env (minimo 32 caracteres)}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
       APP_DOCS_PUBLICAS: ${APP_DOCS_PUBLICAS:-false}
@@ -99,7 +99,7 @@ services:
       MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME:-noreply@constructora.com}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-secret}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-noreply@constructora.com}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
@@ -142,7 +142,7 @@ services:
     restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?Falta GRAFANA_PASSWORD - definela en el archivo .env}
       GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro

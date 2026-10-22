@@ -17,6 +17,7 @@ public class ZonaComunImagenRequestDTO {
 
     @NotBlank(message = "La URL de la imagen es obligatoria")
     @Size(max = 1000, message = "La URL de la imagen no puede superar los 1000 caracteres")
+    @UrlHttps
     @Schema(description = "URL de la imagen", example = "https://misitio.com/imagenes/piscina.jpg")
     private String imagenUrl;
 

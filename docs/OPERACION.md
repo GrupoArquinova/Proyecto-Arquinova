@@ -21,7 +21,7 @@ Está pensada para quien administra el sitio, no solo para quien programa. Aquí
 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `DB_SSL_MODE`, `JWT_SECRET`, `JWT_EXPIRATION` (3600000 = 1 hora),
 `CORS_ALLOWED_ORIGINS`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`,
 `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`,
-`FLYWAY_ENABLED` (false en Render), `APP_SITIO_URL` (cuando haya dominio).
+`FLYWAY_ENABLED` (false en Render), `APP_SITIO_URL` (enlace del correo de recuperación de contraseña y de la política de datos; si falta, usa el primer origen de `CORS_ALLOWED_ORIGINS`; cámbiala cuando haya dominio).
 **No** definir `APP_DOCS_PUBLICAS` (Swagger debe quedar cerrado). `METRICAS_TOKEN` solo si hay un Prometheus que lo use.
 Cuidado al pegar valores: sin espacios sobrantes y **sin los signos `< >` de las plantillas** (una vez `CLOUDINARY_CLOUD_NAME` quedó como `<dn3s7utod>` y las subidas fallaron con 401).
 
@@ -126,6 +126,62 @@ Cada vez que alguien con acceso deja el proyecto, o si una clave se pegó donde 
 3. Cloudinary: regenerar la clave en su consola → `CLOUDINARY_API_KEY` y `CLOUDINARY_API_SECRET` en Render.
 4. `BACKUP_PASSPHRASE`: al cambiarla, los respaldos anteriores siguen necesitando la clave vieja; conserva ambas anotadas.
 
+### 7.1 Rotación de secretos tras exposición en git
+
+El repositorio es público y el historial de git no se puede "limpiar" de verdad (copias, forks, cachés). Si en algún momento se subió un valor secreto, **trátalo como comprometido y cámbialo**, aunque ya se haya borrado del archivo. Orden recomendado (todo sin escribir valores en el repositorio, en chats ni en tickets):
+
+| Secreto | Cómo generar el nuevo | Dónde se cambia | Efecto |
+| --- | --- | --- | --- |
+| `JWT_SECRET` | `openssl rand -base64 48` (más de 32 caracteres aleatorios) | Render → *Environment* | Cierra todas las sesiones. |
+| Contraseña de la base (`DB_PASSWORD`) | La genera Aiven al restablecer la contraseña del usuario (o `openssl rand -base64 32`) | Aiven → *Users*, luego `DB_PASSWORD` en Render y `AIVEN_DB_PASSWORD` en GitHub | El backend se reinicia con la nueva. |
+| Contraseña de aplicación de Gmail (`MAIL_PASSWORD`) | Cuenta de Google → Seguridad → *Contraseñas de aplicaciones*: revocar la anterior y crear otra | Render → `MAIL_PASSWORD` | Los correos usan la nueva. |
+| `GEMINI_API_KEY` | Google AI Studio: borrar la clave y crear otra (con cuota o presupuesto fijado) | Render → `GEMINI_API_KEY` | El chat vuelve a funcionar con la nueva. |
+| `BACKUP_PASSPHRASE` | `openssl rand -base64 48` (32 caracteres o más) | GitHub → *Secrets* | Los respaldos nuevos usan la nueva; **guarda también la vieja** para abrir los anteriores. |
+| `CLOUDINARY_API_SECRET` y `CLOUDINARY_API_KEY` | Consola de Cloudinary → *API Keys* | Render | Las subidas firmadas usan la nueva. |
+| `REDIS_PASSWORD`, `METRICAS_TOKEN` (si se usan) | `openssl rand -base64 32` | Render / Prometheus | — |
+
+Después: revisar que no queden valores reales en `.env`, `k8s/secret.yaml` ni `docker-compose.yml` dentro de git (`k8s/secret.yaml` y `.env` están en `.gitignore`; solo van en git las plantillas `*.example`). El `docker-compose.yml` ya no trae contraseñas por defecto: exige `MYSQL_ROOT_PASSWORD`, `DB_PASSWORD`, `RABBITMQ_PASSWORD`, `GRAFANA_PASSWORD` y `JWT_SECRET` en el `.env`. En `application.yaml` no hay valores por defecto para `JWT_SECRET`, `DB_*` ni `MAIL_*`, y el correo que recibe los avisos (`APP_CONTACTO_CORREO_AVISO`) ya no tiene valor por defecto: **debe definirse en Render**, o los avisos de solicitudes no se envían.
+
+### 7.2 Migración V13 (aplicar a mano en Aiven)
+
+Flyway está apagado en Render: antes de desplegar esta versión ejecutar en Aiven (Workbench, pestaña *Aiven*) el contenido de `src/main/resources/db/migration/V13__seguridad_sesiones_y_retencion.sql`:
+
+```sql
+-- Sesiones: los tokens emitidos antes de este instante dejan de valer (cambio de contraseña/rol, desactivación)
+ALTER TABLE usuarios ADD COLUMN token_valido_desde DATETIME NULL;
+
+-- Tratamiento de datos (Ley 1581): versión de la política aceptada y momento del consentimiento
+ALTER TABLE solicitudes_contacto
+    ADD COLUMN version_politica VARCHAR(20) NULL,
+    ADD COLUMN fecha_consentimiento DATETIME NULL;
+```
+
+Sin esto el backend no arranca (`Schema-validation: missing column`). Las filas existentes quedan con `NULL` y todo sigue funcionando.
+
+### 7.3 Sesiones, bloqueos y límites (cómo se comporta)
+
+- **Sesión**: el token dura 1 hora y el panel lo renueva mientras la persona trabaja, pero la sesión tiene una vida **máxima absoluta de 12 horas** (`JWT_SESION_MAXIMA_HORAS`); pasado ese tiempo hay que iniciar sesión de nuevo. Cambiar la contraseña, el rol o desactivar la cuenta cierra **todas** las sesiones de esa persona al instante (`usuarios.token_valido_desde`). Los tokens revocados al cerrar sesión se guardan en Redis/memoria solo como huella SHA-256.
+- **Inicio de sesión**: 10 intentos por minuto por IP en `/api/auth/login`, `/forgot-password`, `/reset-password` y `/renovar`. Tras 5 fallos seguidos, ese correo queda bloqueado 15 minutos **desde esa IP** (así quien adivina contraseñas no deja fuera a la persona real que entra desde otra IP); además, 30 fallos desde cualquier IP bloquean el correo 15 minutos. Contraseña incorrecta y cuenta desactivada dan la misma respuesta (401).
+- **Recuperación de contraseña**: 3 solicitudes por hora y por correo (exista o no); la respuesta es siempre la misma (200) y los fallos de correo solo van al log. Pedir un enlace nuevo invalida los anteriores; al restablecer, se invalidan todos los pendientes y se cierran las sesiones.
+- **IP del cliente**: el límite usa `request.getRemoteAddr()`; detrás de Render/Kubernetes la resuelve Spring con `server.forward-headers-strategy: framework`. La plataforma debe **sobrescribir** `X-Forwarded-For` (Render lo hace); si algún día se publica la API directamente a internet sin proxy, cambiar la estrategia a `none`.
+- **Tamaños**: cuerpo máximo de 64 KB en `/api/**` (`APP_MAX_CUERPO_BYTES`), respondiendo 413.
+- **Reportes**: máximo 50.000 filas por reporte/Excel/PDF; si se excede, error claro pidiendo afinar los filtros.
+- **Salud**: `/actuator/health` (sondas) es público; el detalle (base de datos, disco) solo lo ve un ADMINISTRADOR.
+
+### 7.4 Formulario público de contacto y datos personales
+
+- El formulario valida tamaños y caracteres de control, descarta con respuesta normal pero **sin guardar ni enviar nada** cualquier envío que traiga texto en el campo trampa `sitioWeb` (honeypot), y la IP y el user-agent los fija el servidor (no se aceptan del cuerpo).
+- Cada solicitud guarda la versión de la política aceptada (`APP_LEGAL_VERSION_POLITICA`, por defecto `2026-10`) y la fecha del consentimiento. **Al publicar una política nueva, actualizar esa variable.**
+- La confirmación al visitante no repite su mensaje; solo lo saluda con su nombre saneado. Hay tope global de confirmaciones (`APP_CONTACTO_CONFIRMACIONES_MAX_HORA`, por defecto 60, y `..._MAX_DIA`, por defecto 300) además de 1 por hora por dirección.
+- **Retención**: cada día a las 03:00 se eliminan las solicitudes con más de `APP_RETENCION_SOLICITUDES_MESES` meses (por defecto 24; `0` desactiva); en el log solo queda la cantidad.
+- **Atender a un titular de datos** (consulta, supresión): `DELETE /api/solicitudes-contacto/por-correo?correo=persona@ejemplo.com` con sesión de administrador; borra todas las solicitudes de ese correo, responde `{"eliminadas": N}` y queda en la auditoría.
+- **Captcha (pendiente, punto de extensión)**: no está implementado porque requiere una cuenta de Cloudflare Turnstile (o reCAPTCHA). Cuando exista: (1) el frontend agrega el widget y envía el token como campo `captchaToken` en `POST /api/solicitudes-contacto/publico`; (2) en `SolicitudContactoController.crearPublica` (o un filtro antes de `RateLimitingFilter`) se valida el token con `https://challenges.cloudflare.com/turnstile/v0/siteverify` usando una variable `TURNSTILE_SECRET` (en Render, nunca en git) y la IP del visitante, y se responde 400 si no es válido; (3) añadir `challenges.cloudflare.com` a la CSP de `vercel.json`. Mientras tanto protegen el formulario: límite por IP (100/min) y global (60/min), honeypot, topes de confirmación y el límite de tamaño.
+
+### 7.5 Variables de entorno nuevas (todas opcionales, con valor por defecto)
+
+`JWT_SESION_MAXIMA_HORAS` (12), `APP_MAX_CUERPO_BYTES` (65536), `APP_LEGAL_VERSION_POLITICA` (2026-10), `APP_RETENCION_SOLICITUDES_MESES` (24), `APP_RETENCION_CRON` (`0 0 3 * * *`), `APP_CONTACTO_CONFIRMACIONES_MAX_HORA` (60), `APP_CONTACTO_CONFIRMACIONES_MAX_DIA` (300), `GEMINI_RESPUESTA_SEGUNDOS` (10), `GEMINI_CONCURRENCIA_MAXIMA` (5), `GEMINI_CUOTA_DIARIA` (1000; 0 = sin tope).
+`APP_CONTACTO_CORREO_AVISO` **ya no tiene valor por defecto**: definirlo en Render (correo que recibe los avisos de nuevas solicitudes).
+
 ## 8. Antes de publicar el sitio de verdad
 
 - [ ] Dominio propio con HTTPS, y actualizar todo lo de la fila "Cambia el dominio".
@@ -136,3 +192,37 @@ Cada vez que alguien con acceso deja el proyecto, o si una clave se pegó donde 
 - [ ] Respaldo automático en verde y una restauración de prueba hecha.
 - [ ] Monitoreo con alertas llegando a una persona que las atienda.
 - [ ] Cookie HttpOnly para la sesión (fase 2 del plan de endurecimiento), cuando el sitio y la API compartan dominio.
+
+## Códigos QR
+
+Los QR (`Documentacion/QR_Arquinova`) apuntan a enlaces cortos del sitio (`/qr/inicio`, `/qr/encanto`, `/qr/brochure`) y estos se redirigen a la página de inicio, a El Encanto y al PDF del brochure (`public/documentos/` del frontend). La regla está en `vercel.json` (`redirects`, redirección temporal): cambiar el destino de un QR ya impreso es editar esa regla y desplegar el frontend. Con dominio nuevo hay que volver a generar los QR (`generador/generar_qr.py`).
+
+## Asistente de IA (chat del sitio)
+
+El chat usa la API de Gemini desde `AIService`. Variables de entorno (nunca en `application.yaml`):
+
+| Variable | Para qué |
+| --- | --- |
+| `GEMINI_API_KEY` | Clave de Google AI Studio. Sin ella el chat responde que no está disponible (503). En local va en `.env`; en la demo, en Render. |
+| `GEMINI_MODEL` | Opcional. Por defecto `gemini-3.1-flash-lite`. Google retira modelos con el tiempo: si el chat deja de responder, mira el log del backend (`Gemini respondió 404`) y cambia el modelo. La lista vigente se consulta con `GET https://generativelanguage.googleapis.com/v1beta/models` y la cabecera `x-goog-api-key`. |
+| `GEMINI_MODEL_RESPALDO` | Opcional. Por defecto `gemini-3.6-flash`. Se usa cuando el principal falla (retirado o con alta demanda). |
+
+- El bot responde solo con datos reales y públicos (proyectos publicados, villas, amenidades, ubicación y lotes por estado, guardados 10 minutos) y tiene prohibido dar precios, plazos o asesoría legal: para eso remite al WhatsApp.
+- `/api/chat` es público: 10 preguntas por minuto por IP (y 120 por minuto entre todas las IP), 500 caracteres por pregunta, como máximo 5 consultas a la vez a la IA (si no hay cupo responde 429 de inmediato) y una cuota diaria global (`GEMINI_CUOTA_DIARIA`; al agotarse responde 503). Conviene fijar también una cuota o un presupuesto en la consola de Google para la clave. Los datos de los proyectos van a la IA entre etiquetas `<datos>` y se le indica que son solo información, no instrucciones.
+- Si la clave se expone (por ejemplo, se sube a un repositorio), hay que revocarla en Google AI Studio y crear otra.
+- Ante un fallo pasajero de Google (429 o 5xx) el backend reintenta una vez por modelo (2 reintentos en total, con espera de 0,5 s y tiempo máximo de respuesta de 10 s) y, si sigue fallando, prueba el modelo de respaldo; solo después el visitante ve el aviso de "no puedo responder". Si en el log aparecen muchos `Gemini respondió 429`, la cuota de la clave es insuficiente (los planes gratuitos tienen pocas peticiones por minuto): conviene activar la facturación en Google AI Studio.
+- El bot está instruido para interpretar mensajes con faltas de ortografía, sin tildes o abreviados ("q proyectos tienen", "donde keda").
+
+## Reportes (Excel y PDF)
+
+Pantalla: **Admin → Reportes**. Seis reportes (lotes, proyectos, etapas, estados comerciales, solicitudes y actividad), cada uno con
+sus filtros, y descarga en Excel (`/api/documentos/excel/<reporte>`) y en PDF (`/api/documentos/pdf/<reporte>`) con los mismos
+filtros. La ficha técnica de un proyecto es `/api/documentos/pdf/proyecto/{id}/ficha-tecnica`.
+
+- Por defecto los reportes cuentan solo lo **activo**, igual que los indicadores del panel; `incluirInactivos=true` agrega lo inactivo.
+- El Excel trae una hoja con el reporte (filtros de columna, encabezado fijo, totales que se ajustan al filtrar) y una hoja "Resumen".
+- El PDF no corta la lista: continúa en las hojas necesarias, con "Página X de N".
+- Los reportes no incluyen precios.
+- El código está en `documento/` (`Columna`, `ExcelReporte`, `PdfReporte`) y `ReporteDocumentoService`: cada reporte se define una sola vez y de
+  ahí salen sus dos formatos. `ReporteIntegracionTest` genera todos los archivos con la base real.
+

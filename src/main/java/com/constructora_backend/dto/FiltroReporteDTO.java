@@ -31,6 +31,14 @@ public class FiltroReporteDTO {
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate fechaFin;
 
+    @Schema(description = "Si es true, el reporte incluye también los registros inactivos (por defecto solo los activos, igual que los indicadores)", example = "false")
+    private Boolean incluirInactivos;
+
+    /** Por defecto los reportes muestran solo lo activo, para coincidir con los indicadores del panel. */
+    public boolean incluyeInactivos() {
+        return Boolean.TRUE.equals(incluirInactivos);
+    }
+
     @AssertTrue(message = "La fecha inicial no puede ser posterior a la fecha final")
     public boolean isRangoFechasValido() {
         if (fechaInicio == null || fechaFin == null) {

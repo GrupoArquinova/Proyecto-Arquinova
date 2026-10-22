@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -95,8 +96,13 @@ public class UsuarioController {
     })
     public ResponseEntity<UsuarioResponseDTO> actualizar(
             @Parameter(description = "ID del usuario a actualizar", example = "1") @PathVariable Long id,
-            @Valid @RequestBody UsuarioUpdateDTO usuarioDTO) {
-        return ResponseEntity.ok(usuarioService.actualizar(id, usuarioDTO));
+            @Valid @RequestBody UsuarioUpdateDTO usuarioDTO,
+            Authentication authentication) {
+        // Un administrador cambia todo; cualquier otra persona solo su nombre y su contraseña (con la actual)
+        boolean esAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMINISTRADOR".equals(a.getAuthority()));
+        String correo = authentication != null ? authentication.getName() : null;
+        return ResponseEntity.ok(usuarioService.actualizar(id, usuarioDTO, esAdmin, correo));
     }
 
     @DeleteMapping("/{id}")
@@ -110,8 +116,9 @@ public class UsuarioController {
         @ApiResponse(responseCode = "403", description = "Acceso denegado - Requiere rol de Administrador")
     })
     public ResponseEntity<Void> eliminar(
-            @Parameter(description = "ID del usuario a eliminar", example = "1") @PathVariable Long id) {
-        usuarioService.eliminar(id);
+            @Parameter(description = "ID del usuario a eliminar", example = "1") @PathVariable Long id,
+            Authentication authentication) {
+        usuarioService.eliminar(id, authentication != null ? authentication.getName() : null);
         return ResponseEntity.noContent().build();
     }
 }

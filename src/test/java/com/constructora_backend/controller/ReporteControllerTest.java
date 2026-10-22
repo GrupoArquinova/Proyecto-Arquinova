@@ -121,12 +121,26 @@ class ReporteControllerTest {
     }
 
     @Test
+    @DisplayName("GET /api/reportes/etapas - Retorna los lotes de cada etapa por estado con HTTP 200")
+    @WithMockUser(roles = "ADMINISTRADOR")
+    void consultarReporteEtapas_Exitoso() throws Exception {
+        when(reporteService.consultarReporteEtapas(any(FiltroReporteDTO.class))).thenReturn(List.of(
+                new ReporteEtapaItemDTO(1L, "Altos del Sol", 10L, "Etapa 1", 20L, 10L, 5L, 5L, new BigDecimal("16000.00"))));
+
+        mockMvc.perform(get("/api/reportes/etapas").param("proyectoId", "1").param("incluirInactivos", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].etapaNombre").value("Etapa 1"))
+                .andExpect(jsonPath("$[0].totalLotes").value(20))
+                .andExpect(jsonPath("$[0].vendidos").value(5));
+    }
+
+    @Test
     @DisplayName("GET /api/reportes/solicitudes - Retorna lista de solicitudes con HTTP 200")
     @WithMockUser(roles = "ADMINISTRADOR")
     void consultarReporteSolicitudes_Exitoso() throws Exception {
         ReporteSolicitudItemDTO item = new ReporteSolicitudItemDTO(
                 1L, "Altos del Sol", "L-01", "Carlos Pérez", "carlos@correo.com", "3001234567",
-                "NUEVA", "Asesor Comercial", LocalDateTime.now()
+                "NUEVA", "Asesor Comercial", LocalDateTime.now(), "Villa Samán", "Quiero información", null
         );
         when(reporteService.consultarReporteSolicitudes(any(FiltroReporteDTO.class)))
                 .thenReturn(List.of(item));

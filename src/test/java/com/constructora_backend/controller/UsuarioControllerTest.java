@@ -106,15 +106,16 @@ class UsuarioControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRADOR")
     @DisplayName("PUT /api/usuarios/{id} debe recibir UsuarioUpdateDTO y retornar DTO actualizado")
     void actualizar_exito() throws Exception {
         UsuarioUpdateDTO updateDTO = new UsuarioUpdateDTO();
         updateDTO.setNombreCompleto("Admin Actualizado");
 
-        when(usuarioService.actualizar(eq(1L), any(UsuarioUpdateDTO.class))).thenReturn(usuarioResponseDTO);
+        when(usuarioService.actualizar(eq(1L), any(UsuarioUpdateDTO.class), eq(true), any())).thenReturn(usuarioResponseDTO);
 
         mockMvc.perform(put("/api/usuarios/1")
+                        .principal(new org.springframework.security.authentication.TestingAuthenticationToken("admin@empresa.com", "x", "ROLE_ADMINISTRADOR"))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDTO)))
@@ -123,10 +124,33 @@ class UsuarioControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(username = "ana@empresa.com", roles = "USUARIO")
+    @DisplayName("PUT /api/usuarios/{id} de alguien que no es administrador llega al servicio como no-admin con su propio correo")
+    void actualizar_noAdminSeIdentificaComoTal() throws Exception {
+        UsuarioUpdateDTO updateDTO = new UsuarioUpdateDTO();
+        updateDTO.setNombreCompleto("Ana Nueva");
+        updateDTO.setPassword("NuevaPass123!");
+        updateDTO.setPasswordActual("ActualPass123!");
+
+        when(usuarioService.actualizar(eq(1L), any(UsuarioUpdateDTO.class), eq(false), eq("ana@empresa.com"))).thenReturn(usuarioResponseDTO);
+
+        mockMvc.perform(put("/api/usuarios/1")
+                        .principal(new org.springframework.security.authentication.TestingAuthenticationToken("ana@empresa.com", "x", "ROLE_USUARIO"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDTO)))
+                .andExpect(status().isOk());
+
+        org.mockito.ArgumentCaptor<UsuarioUpdateDTO> captor = org.mockito.ArgumentCaptor.forClass(UsuarioUpdateDTO.class);
+        org.mockito.Mockito.verify(usuarioService).actualizar(eq(1L), captor.capture(), eq(false), eq("ana@empresa.com"));
+        org.junit.jupiter.api.Assertions.assertEquals("ActualPass123!", captor.getValue().getPasswordActual());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMINISTRADOR")
     @DisplayName("DELETE /api/usuarios/{id} debe retornar 204 No Content")
     void eliminar_exito() throws Exception {
-        doNothing().when(usuarioService).eliminar(1L);
+        doNothing().when(usuarioService).eliminar(eq(1L), any());
 
         mockMvc.perform(delete("/api/usuarios/1").with(csrf()))
                 .andExpect(status().isNoContent());

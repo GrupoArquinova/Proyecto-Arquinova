@@ -20,4 +20,8 @@ public class ReporteSolicitudItemDTO {
     private String estadoNombre;
     private String atendidaPorNombre;
     private LocalDateTime creadoEn;
+    /** Tipología (villa) por la que se consultó; vacío si no eligió una. */
+    private String tipologiaNombre;
+    private String mensaje;
+    private LocalDateTime atendidaEn;
 }

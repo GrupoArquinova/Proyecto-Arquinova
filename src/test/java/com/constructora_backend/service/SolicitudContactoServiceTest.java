@@ -92,7 +92,7 @@ class SolicitudContactoServiceTest {
     @Test
     void crearPublicaExitosamente() {
         when(estadoSolicitudRepository.findFirstByNombreIgnoreCase("NUEVO")).thenReturn(Optional.of(estadoNueva));
-        when(solicitudMapper.toEntity(publicDTO, estadoNueva, null, null)).thenReturn(solicitud);
+        when(solicitudMapper.toEntity(publicDTO, estadoNueva, null, null, null)).thenReturn(solicitud);
         when(solicitudRepository.save(any(SolicitudContacto.class))).thenReturn(solicitud);
         when(solicitudMapper.toDTO(solicitud)).thenReturn(responseDTO);
 

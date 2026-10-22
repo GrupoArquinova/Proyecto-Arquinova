@@ -19,6 +19,12 @@ public class UserSecurityHelper {
         this.usuarioRepository = usuarioRepository;
     }
 
+    /** true si la autenticación (puede ser null, anónimo) tiene el rol ADMINISTRADOR. */
+    public static boolean esAdmin(Authentication authentication) {
+        return authentication != null && authentication.isAuthenticated()
+                && authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMINISTRADOR".equals(a.getAuthority()));
+    }
+
     /**
      * Verifica si el usuario autenticado es ADMINISTRADOR o si es el propietario
      * del registro de usuario identificado por targetUserId.

@@ -8,6 +8,7 @@ import com.constructora_backend.entity.Proyecto;
 import com.constructora_backend.mapper.CasaModeloMapper;
 import com.constructora_backend.repository.CasaModeloRepository;
 import com.constructora_backend.repository.ProyectoRepository;
+import com.constructora_backend.repository.SolicitudContactoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +31,9 @@ class CasaModeloServiceTest {
 
     @Mock
     private ProyectoRepository proyectoRepository;
+
+    @Mock
+    private SolicitudContactoRepository solicitudContactoRepository;
 
     @Mock
     private CasaModeloMapper casaModeloMapper;
@@ -106,5 +110,16 @@ class CasaModeloServiceTest {
 
         assertTrue(excepcion.getMessage().contains("Casa modelo no encontrada"));
         verify(casaModeloRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void eliminarUnaVillaDejaEnBlancoLaReferenciaEnLasSolicitudes() {
+        when(casaModeloRepository.existsById(8L)).thenReturn(true);
+
+        casaModeloService.eliminar(8L);
+
+        var orden = inOrder(solicitudContactoRepository, casaModeloRepository);
+        orden.verify(solicitudContactoRepository).quitarCasaModelo(8L);
+        orden.verify(casaModeloRepository).deleteById(8L);
     }
 }

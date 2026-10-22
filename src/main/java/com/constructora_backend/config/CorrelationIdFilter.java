@@ -26,12 +26,20 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
     public static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
     public static final String CORRELATION_ID_KEY = "correlationId";
 
+    private static final java.util.regex.Pattern FORMATO_VALIDO = java.util.regex.Pattern.compile("^[A-Za-z0-9-]{1,64}$");
+
+    /** Letras, números y guiones, de 1 a 64 caracteres (cubre los UUID); cualquier otra cosa se reemplaza por uno generado. */
+    public static boolean esValido(String correlationId) {
+        return correlationId != null && FORMATO_VALIDO.matcher(correlationId).matches();
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
         String correlationId = request.getHeader(CORRELATION_ID_HEADER);
-        if (correlationId == null || correlationId.isBlank()) {
+        // El valor llega de fuera y va a los registros y a la respuesta: solo se acepta uno con forma de identificador
+        if (!esValido(correlationId)) {
             correlationId = UUID.randomUUID().toString();
         }
 

@@ -43,6 +43,17 @@ public class UsuarioMapper {
         return usuario;
     }
 
+    /** Edición del propio perfil por quien no es administrador: solo el nombre; correo, rol y estado no se tocan. */
+    public void actualizarNombre(UsuarioUpdateDTO dto, Usuario usuario) {
+        if (dto == null || usuario == null) {
+            return;
+        }
+        if (dto.getNombreCompleto() != null && !dto.getNombreCompleto().isBlank()) {
+            usuario.setNombreCompleto(dto.getNombreCompleto());
+        }
+    }
+
+    /** Edición completa (solo administradores): nombre, correo, rol y estado. La contraseña la maneja el servicio. */
     public void updateEntityFromDTO(UsuarioUpdateDTO dto, Usuario usuario, Rol rol) {
         if (dto == null || usuario == null) {
             return;

@@ -50,6 +50,7 @@ public class EmpresaRequestDTO {
     private String direccion;
 
     @Size(max = 1000, message = "La URL del logo no puede superar los 1000 caracteres")
+    @UrlHttps
     @Schema(description = "URL completa de la imagen del logotipo de la empresa", example = "https://example.com/logos/conclave.png")
     private String logoUrl;
 

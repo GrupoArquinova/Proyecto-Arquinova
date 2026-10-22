@@ -14,6 +14,8 @@ public class SolicitudContactoResponseDTO {
     private String proyectoNombre;
     private Long loteId;
     private String loteCodigo;
+    private Long casaModeloId;
+    private String casaModeloNombre;
     private String nombre;
     private String correo;
     private String telefono;
@@ -21,6 +23,9 @@ public class SolicitudContactoResponseDTO {
     private String idioma;
     private String mensaje;
     private Boolean consentimientoDatos;
+    /** Versión de la política de datos aceptada y momento del consentimiento. */
+    private String versionPolitica;
+    private LocalDateTime fechaConsentimiento;
     private String ip;
     private String userAgent;
     private Long atendidaPorId;

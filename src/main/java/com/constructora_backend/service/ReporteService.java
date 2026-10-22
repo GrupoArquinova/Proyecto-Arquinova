@@ -15,8 +15,19 @@ import java.util.*;
 @Service
 public class ReporteService {
 
+    /** Máximo de filas que devuelve un reporte (y por tanto un Excel o PDF): si hay más, se pide afinar los filtros. */
+    public static final int MAX_FILAS = 50_000;
+
     @PersistenceContext
     private EntityManager entityManager;
+
+    /** Lanza un error claro si la consulta trajo más filas que el tope (se pide una más para saberlo). */
+    static void verificarTope(List<?> filas) {
+        if (filas.size() > MAX_FILAS) {
+            throw new com.constructora_backend.exception.BadRequestException(
+                    "El reporte supera el máximo de " + MAX_FILAS + " filas. Acota los filtros (proyecto, estado o fechas) e inténtalo de nuevo.");
+        }
+    }
 
     // ============================================================
     // RF22 - DASHBOARD DE INDICADORES
@@ -78,6 +89,10 @@ public class ReporteService {
 
         Map<String, Object> params = new HashMap<>();
 
+        if (!filtro.incluyeInactivos()) {
+            jpql.append("AND p.activo = true ");
+        }
+
         if (filtro.getProyectoId() != null) {
             jpql.append("AND p.id = :proyectoId ");
             params.put("proyectoId", filtro.getProyectoId());
@@ -100,8 +115,12 @@ public class ReporteService {
         Query query = entityManager.createQuery(jpql.toString());
         params.forEach(query::setParameter);
 
+        // Tope de filas: una consulta sin filtros sobre una tabla enorme no debe agotar la memoria del servidor
+        query.setMaxResults(MAX_FILAS + 1);
+
         @SuppressWarnings("unchecked")
         List<ReporteProyectoItemDTO> resultado = query.getResultList();
+        verificarTope(resultado);
         return resultado;
     }
 
@@ -121,6 +140,10 @@ public class ReporteService {
         );
 
         Map<String, Object> params = new HashMap<>();
+
+        if (!filtro.incluyeInactivos()) {
+            jpql.append("AND l.activo = true ");
+        }
 
         if (filtro.getProyectoId() != null) {
             jpql.append("AND p.id = :proyectoId ");
@@ -144,8 +167,12 @@ public class ReporteService {
         Query query = entityManager.createQuery(jpql.toString());
         params.forEach(query::setParameter);
 
+        // Tope de filas: una consulta sin filtros sobre una tabla enorme no debe agotar la memoria del servidor
+        query.setMaxResults(MAX_FILAS + 1);
+
         @SuppressWarnings("unchecked")
         List<ReporteLoteItemDTO> resultado = query.getResultList();
+        verificarTope(resultado);
         return resultado;
     }
 
@@ -160,10 +187,14 @@ public class ReporteService {
                         "JOIN l.etapa et " +
                         "JOIN et.proyecto p " +
                         "JOIN l.estado est " +
-                        "WHERE l.activo = true "
+                        "WHERE 1=1 "
         );
 
         Map<String, Object> params = new HashMap<>();
+
+        if (!filtro.incluyeInactivos()) {
+            jpql.append("AND l.activo = true ");
+        }
 
         if (filtro.getProyectoId() != null) {
             jpql.append("AND p.id = :proyectoId ");
@@ -204,6 +235,68 @@ public class ReporteService {
     }
 
     // ============================================================
+    // REPORTE DE ETAPAS: lotes de cada etapa por estado comercial
+    // ============================================================
+    @Transactional(readOnly = true)
+    public List<ReporteEtapaItemDTO> consultarReporteEtapas(FiltroReporteDTO filtro) {
+        boolean incluir = filtro.incluyeInactivos();
+        Map<String, Object> params = new HashMap<>();
+
+        StringBuilder etapasJpql = new StringBuilder(
+                "SELECT p.id, p.nombre, et.id, et.nombre, et.activo, p.activo FROM Etapa et JOIN et.proyecto p WHERE 1=1 ");
+        StringBuilder lotesJpql = new StringBuilder(
+                "SELECT et.id, est.nombre, l.areaM2 FROM Lote l JOIN l.etapa et JOIN et.proyecto p JOIN l.estado est WHERE 1=1 ");
+        if (!incluir) {
+            lotesJpql.append("AND l.activo = true ");
+        }
+        if (filtro.getProyectoId() != null) {
+            etapasJpql.append("AND p.id = :proyectoId ");
+            lotesJpql.append("AND p.id = :proyectoId ");
+            params.put("proyectoId", filtro.getProyectoId());
+        }
+        etapasJpql.append("ORDER BY p.nombre ASC, et.orden ASC, et.id ASC");
+
+        Query etapasQuery = entityManager.createQuery(etapasJpql.toString());
+        Query lotesQuery = entityManager.createQuery(lotesJpql.toString());
+        params.forEach((k, v) -> {
+            etapasQuery.setParameter(k, v);
+            lotesQuery.setParameter(k, v);
+        });
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> etapas = etapasQuery.getResultList();
+        @SuppressWarnings("unchecked")
+        List<Object[]> lotes = lotesQuery.getResultList();
+
+        // Una pasada por los lotes: etapaId -> [total, disponibles, reservados, vendidos, area]
+        Map<Long, long[]> conteos = new HashMap<>();
+        Map<Long, BigDecimal> areas = new HashMap<>();
+        for (Object[] fila : lotes) {
+            Long etapaId = ((Number) fila[0]).longValue();
+            String estado = fila[1] == null ? "" : ((String) fila[1]).toUpperCase();
+            long[] c = conteos.computeIfAbsent(etapaId, k -> new long[4]);
+            c[0]++;
+            if ("DISPONIBLE".equals(estado)) c[1]++;
+            else if ("RESERVADO".equals(estado)) c[2]++;
+            else if ("VENDIDO".equals(estado)) c[3]++;
+            if (fila[2] != null) areas.merge(etapaId, (BigDecimal) fila[2], BigDecimal::add);
+        }
+
+        List<ReporteEtapaItemDTO> resultado = new ArrayList<>();
+        for (Object[] fila : etapas) {
+            Long etapaId = ((Number) fila[2]).longValue();
+            long[] c = conteos.getOrDefault(etapaId, new long[4]);
+            boolean vigente = Boolean.TRUE.equals(fila[4]) && Boolean.TRUE.equals(fila[5]);
+            // Una etapa inactiva solo aparece si todavía tiene lotes activos: así los totales coinciden con el reporte de lotes
+            if (!incluir && !vigente && c[0] == 0) continue;
+            resultado.add(new ReporteEtapaItemDTO(
+                    ((Number) fila[0]).longValue(), (String) fila[1], etapaId, (String) fila[3],
+                    c[0], c[1], c[2], c[3], areas.getOrDefault(etapaId, BigDecimal.ZERO)));
+        }
+        return resultado;
+    }
+
+    // ============================================================
     // RF26 - REPORTE DE SOLICITUDES DE CONTACTO
     // ============================================================
     @Transactional(readOnly = true)
@@ -211,10 +304,12 @@ public class ReporteService {
         StringBuilder jpql = new StringBuilder(
                 "SELECT new com.constructora_backend.dto.ReporteSolicitudItemDTO(" +
                         "s.id, COALESCE(p.nombre, 'General'), COALESCE(l.codigo, 'N/A'), s.nombre, COALESCE(s.correo, 'No indicó'), COALESCE(s.telefono, 'No indicó'), " +
-                        "est.nombre, COALESCE(u.nombreCompleto, 'Sin Atender'), s.creadoEn) " +
+                        "est.nombre, COALESCE(u.nombreCompleto, 'Sin Atender'), s.creadoEn, " +
+                        "COALESCE(cm.nombre, ''), COALESCE(s.mensaje, ''), s.atendidaEn) " +
                         "FROM SolicitudContacto s " +
                         "LEFT JOIN s.proyecto p " +
                         "LEFT JOIN s.lote l " +
+                        "LEFT JOIN s.casaModelo cm " +
                         "JOIN s.estado est " +
                         "LEFT JOIN s.atendidaPor u " +
                         "WHERE 1=1 "
@@ -244,8 +339,12 @@ public class ReporteService {
         Query query = entityManager.createQuery(jpql.toString());
         params.forEach(query::setParameter);
 
+        // Tope de filas: una consulta sin filtros sobre una tabla enorme no debe agotar la memoria del servidor
+        query.setMaxResults(MAX_FILAS + 1);
+
         @SuppressWarnings("unchecked")
         List<ReporteSolicitudItemDTO> resultado = query.getResultList();
+        verificarTope(resultado);
         return resultado;
     }
 
@@ -279,8 +378,12 @@ public class ReporteService {
         Query query = entityManager.createQuery(jpql.toString());
         params.forEach(query::setParameter);
 
+        // Tope de filas: una consulta sin filtros sobre una tabla enorme no debe agotar la memoria del servidor
+        query.setMaxResults(MAX_FILAS + 1);
+
         @SuppressWarnings("unchecked")
         List<ReporteActividadItemDTO> resultado = query.getResultList();
+        verificarTope(resultado);
         return resultado;
     }
 }

@@ -45,12 +45,20 @@ public class JwtFilter extends OncePerRequestFilter {
                 String correo = jwtUtils.obtenerCorreoDelToken(token);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(correo);
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                if (!userDetails.isEnabled()) {
+                    // Una cuenta desactivada no entra aunque su token siga vigente
+                    log.warn("Token de una cuenta desactivada en: {}", request.getRequestURI());
+                } else if (!UsuarioPrincipal.tokenAceptado(userDetails, jwtUtils.obtenerEmisionMillis(token))) {
+                    // Token anterior a un cambio de contraseña o de rol, o a una desactivación: la sesión quedó revocada
+                    log.warn("Token revocado por cambio de credenciales en: {}", request.getRequestURI());
+                } else {
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.debug("Usuario autenticado: {}", correo);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    log.debug("Usuario autenticado");
+                }
             } else if (token != null) {
                 log.warn("Token JWT inválido recibido en: {}", request.getRequestURI());
             }

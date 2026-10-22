@@ -75,6 +75,17 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         response.setHeader("X-RateLimit-Limit", String.valueOf(limit));
         response.setHeader("X-RateLimit-Remaining", String.valueOf(probe.getRemainingTokens()));
 
+        // Respaldo global (chat y contacto): protege el gasto de la IA y la bandeja aunque el abuso venga de muchas IP
+        if (probe.isConsumed()) {
+            Bucket global = rateLimitConfig.resolveGlobalBucket(category);
+            if (global != null) {
+                ConsumptionProbe sondaGlobal = global.tryConsumeAndReturnRemaining(1);
+                if (!sondaGlobal.isConsumed()) {
+                    probe = sondaGlobal;
+                }
+            }
+        }
+
         if (probe.isConsumed()) {
             // La petición fue aceptada, continuar la cadena de filtros
             filterChain.doFilter(request, response);
@@ -83,7 +94,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             long waitSeconds = probe.getNanosToWaitForRefill() / 1_000_000_000 + 1;
 
             log.warn("Rate Limit excedido: IP={}, ruta={}, categoría={}, retry en {}s",
-                    clientIp, uri, category, waitSeconds);
+                    clientIp, uri.replaceAll("[\\r\\n]", "_"), category, waitSeconds);
 
             response.setHeader("Retry-After", String.valueOf(waitSeconds));
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
@@ -102,21 +113,13 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Resuelve la IP real del cliente, considerando proxies/load balancers.
+     * IP del cliente: la que resuelve el contenedor. Detrás de un proxy (Render, Kubernetes) la toma Spring de los
+     * encabezados X-Forwarded-* con server.forward-headers-strategy=framework; aquí NUNCA se leen esos encabezados a mano,
+     * porque cualquiera puede enviarlos y así saltarse el límite cambiando su valor en cada petición.
      */
-    private String resolveClientIp(HttpServletRequest request) {
-        // Verificar headers de proxy en orden de confiabilidad
-        String[] headerNames = {"X-Forwarded-For", "X-Real-IP", "Proxy-Client-IP", "WL-Proxy-Client-IP"};
-
-        for (String header : headerNames) {
-            String ip = request.getHeader(header);
-            if (ip != null && !ip.isBlank() && !"unknown".equalsIgnoreCase(ip)) {
-                // X-Forwarded-For puede contener múltiples IPs: "clientIP, proxy1, proxy2"
-                return ip.split(",")[0].trim();
-            }
-        }
-
-        return request.getRemoteAddr();
+    static String resolveClientIp(HttpServletRequest request) {
+        String ip = request.getRemoteAddr();
+        return ip == null || ip.isBlank() ? "desconocida" : ip;
     }
 
     /**
@@ -127,6 +130,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             case AUTH -> RateLimitConfig.AUTH_LIMIT;
             case PUBLIC -> RateLimitConfig.PUBLIC_LIMIT;
             case GENERAL -> RateLimitConfig.GENERAL_LIMIT;
+            case CHAT -> RateLimitConfig.CHAT_LIMIT;
             case NONE -> Long.MAX_VALUE;
         };
     }

@@ -25,8 +25,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-
 import java.util.Arrays;
 import java.util.List;
 
@@ -38,7 +36,7 @@ public class SecurityConfig {
     private final JwtFilter jwtFilter;
     private final RateLimitingFilter rateLimitingFilter;
     private final CorrelationIdFilter correlationIdFilter;
-    private final ClientRegistrationRepository clientRegistrationRepository;
+    private final LimiteTamanoFilter limiteTamanoFilter;
     private final MetricasTokenFilter metricasTokenFilter;
 
     @Value("${cors.allowed-origins:http://localhost:4200}")
@@ -57,12 +55,12 @@ public class SecurityConfig {
     public SecurityConfig(JwtFilter jwtFilter,
                           RateLimitingFilter rateLimitingFilter,
                           @Autowired(required = false) CorrelationIdFilter correlationIdFilter,
-                          @Autowired(required = false) ClientRegistrationRepository clientRegistrationRepository,
+                          @Autowired(required = false) LimiteTamanoFilter limiteTamanoFilter,
                           @Autowired(required = false) MetricasTokenFilter metricasTokenFilter) {
         this.jwtFilter = jwtFilter;
         this.rateLimitingFilter = rateLimitingFilter;
         this.correlationIdFilter = correlationIdFilter != null ? correlationIdFilter : new CorrelationIdFilter();
-        this.clientRegistrationRepository = clientRegistrationRepository;
+        this.limiteTamanoFilter = limiteTamanoFilter != null ? limiteTamanoFilter : new LimiteTamanoFilter();
         this.metricasTokenFilter = metricasTokenFilter;
     }
 
@@ -101,6 +99,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/solicitudes-contacto/publico").permitAll()
+                        .requestMatchers("/api/chat/**").permitAll()
                         // Lecturas públicas del sitio. Los endpoints solo-admin dentro de estas rutas
                         // (p. ej. GET /api/lotes) se protegen con @PreAuthorize en el controlador.
                         .requestMatchers(HttpMethod.GET,
@@ -120,20 +119,23 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/prometheus").hasRole("METRICAS")
                         .requestMatchers("/actuator/**").hasRole("ADMINISTRADOR")
                         .requestMatchers("/api/admin/**").hasRole("ADMINISTRADOR")
+                        // Cualquier persona con sesión puede editar SU perfil (PUT /api/usuarios/{id}); el servicio solo le deja
+                        // cambiar nombre y contraseña, y @PreAuthorize comprueba que sea el dueño. Va antes de la regla general.
+                        .requestMatchers(HttpMethod.PUT, "/api/usuarios/*").authenticated()
+                        // Regla por defecto: escribir en la API es cosa de administradores. Las excepciones públicas (/api/auth/**,
+                        // POST contacto público, /api/chat/**) y el perfil propio ya quedaron arriba. Así un endpoint nuevo
+                        // sin @PreAuthorize no queda abierto por olvido.
+                        .requestMatchers(HttpMethod.POST, "/api/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.PUT, "/api/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.PATCH, "/api/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMINISTRADOR")
                         .anyRequest().authenticated()
                 );
-
-        if (clientRegistrationRepository != null) {
-            http.oauth2Login(oauth2 -> oauth2
-                    .authorizationEndpoint(authorization -> authorization
-                            .baseUri("/oauth2/authorization")
-                    )
-            );
-        }
 
         if (metricasTokenFilter != null) {
             http.addFilterBefore(metricasTokenFilter, UsernamePasswordAuthenticationFilter.class);
         }
+        http.addFilterBefore(limiteTamanoFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

@@ -7,6 +7,7 @@ import com.constructora_backend.dto.response.SolicitudContactoResponseDTO;
 import com.constructora_backend.service.SolicitudContactoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,7 +19,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/solicitudes-contacto")
-@CrossOrigin(origins = "*") // Permite peticiones desde el frontend público sin bloqueos CORS
 @Tag(name = "Solicitudes de Contacto", description = "Endpoints para la recepción, atención y administración de solicitudes de contacto")
 public class SolicitudContactoController {
 
@@ -57,8 +57,21 @@ public class SolicitudContactoController {
 
     @PostMapping("/publico")
     @Operation(summary = "Crear solicitud pública", description = "Endpoint público para que visitantes envíen una solicitud de información")
-    public ResponseEntity<SolicitudContactoResponseDTO> crearPublica(@Valid @RequestBody SolicitudContactoPublicDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(solicitudService.crearPublica(dto));
+    public ResponseEntity<SolicitudContactoResponseDTO> crearPublica(@Valid @RequestBody SolicitudContactoPublicDTO dto,
+                                                                     HttpServletRequest request) {
+        // La IP y el user-agent salen de la petición real, no del cuerpo (que podría traer cualquier cosa)
+        String ip = request.getRemoteAddr();
+        String userAgent = request.getHeader("User-Agent");
+        return ResponseEntity.status(HttpStatus.CREATED).body(solicitudService.crearPublica(dto, ip, userAgent));
+    }
+
+    @DeleteMapping("/por-correo")
+    @Operation(summary = "Eliminar las solicitudes de un correo",
+            description = "Atiende la solicitud de un titular de datos (Ley 1581): elimina todas las solicitudes hechas con ese correo y devuelve cuántas fueron")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @Auditable(accion = "ELIMINAR_SOLICITUDES_POR_CORREO", entidad = "SOLICITUDES_CONTACTO", descripcion = "Eliminación de solicitudes de contacto de un titular de datos")
+    public ResponseEntity<java.util.Map<String, Integer>> eliminarPorCorreo(@RequestParam String correo) {
+        return ResponseEntity.ok(java.util.Map.of("eliminadas", solicitudService.eliminarPorCorreo(correo)));
     }
 
     @PatchMapping("/{id}/atender")

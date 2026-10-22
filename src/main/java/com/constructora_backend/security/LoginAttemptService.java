@@ -3,17 +3,25 @@ package com.constructora_backend.security;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Servicio distribuido de mitigación contra ataques de fuerza bruta y diccionario.
- * Bloquea temporalmente el inicio de sesión para un correo específico si acumula
- * 5 intentos fallidos consecutivos durante un período de 15 minutos.
+ * <p>
+ * Cuenta los fallos de inicio de sesión de dos maneras:
+ * <ul>
+ *   <li>Por correo + IP: 5 fallos seguidos en 15 minutos bloquean ese par. Así quien adivina contraseñas desde una IP
+ *       no puede dejar fuera a la persona real que entra desde otra.</li>
+ *   <li>Por correo en general: un umbral mucho más alto (30) frena los ataques repartidos entre muchas IP sin que
+ *       bloquear una cuenta sea trivial.</li>
+ * </ul>
  * Soporta Redis distribuido para arquitecturas multi-pod con fallback transparente en memoria.
  */
 @Service
@@ -21,7 +29,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class LoginAttemptService {
 
     public static final int MAX_INTENTOS = 5;
+    /** Umbral por correo sumando todas las IP (ataque distribuido). */
+    public static final int MAX_INTENTOS_GLOBAL = 30;
     public static final int BLOQUEO_MINUTOS = 15;
+    /** Tope de claves en memoria cuando no hay Redis (las claves salen de datos que escribe quien llama). */
+    static final int MAX_CLAVES_LOCALES = 50_000;
 
     private static final String ATTEMPTS_PREFIX = "login:attempts:";
     private static final String BLOCKED_PREFIX = "login:blocked:";
@@ -30,16 +42,12 @@ public class LoginAttemptService {
 
     private static class IntentoInfo {
         int intentos;
-        LocalDateTime ultimoFallo;
+        LocalDateTime ventanaDesde = LocalDateTime.now();
         LocalDateTime bloqueadoHasta;
-
-        IntentoInfo() {
-            this.intentos = 1;
-            this.ultimoFallo = LocalDateTime.now();
-        }
     }
 
     private final Map<String, IntentoInfo> intentosLocales = new ConcurrentHashMap<>();
+    private volatile long ultimaPurgaMs;
 
     public LoginAttemptService() {
         this(null);
@@ -50,11 +58,22 @@ public class LoginAttemptService {
         this.redisTemplate = redisTemplate;
     }
 
+    private static String claveCorreo(String correo) {
+        return "c:" + correo.trim().toLowerCase(Locale.ROOT);
+    }
 
-    public void registrarFallo(String correo) {
+    private static String clavePar(String correo, String ip) {
+        return "p:" + correo.trim().toLowerCase(Locale.ROOT) + "|" + (ip == null || ip.isBlank() ? "-" : ip.trim());
+    }
+
+    /** Registra un intento fallido de este correo desde esta IP. */
+    public void registrarFallo(String correo, String ip) {
         if (correo == null || correo.isBlank()) return;
-        String key = correo.trim().toLowerCase();
+        contar(clavePar(correo, ip), MAX_INTENTOS);
+        contar(claveCorreo(correo), MAX_INTENTOS_GLOBAL);
+    }
 
+    private void contar(String key, int maximo) {
         if (redisTemplate != null) {
             try {
                 String attemptKey = ATTEMPTS_PREFIX + key;
@@ -62,8 +81,7 @@ public class LoginAttemptService {
                 if (count != null && count == 1) {
                     redisTemplate.expire(attemptKey, Duration.ofMinutes(BLOQUEO_MINUTOS));
                 }
-
-                if (count != null && count >= MAX_INTENTOS) {
+                if (count != null && count >= maximo) {
                     redisTemplate.opsForValue().set(BLOCKED_PREFIX + key, "blocked", Duration.ofMinutes(BLOQUEO_MINUTOS));
                 }
                 return;
@@ -73,47 +91,57 @@ public class LoginAttemptService {
         }
 
         // Fallback local
+        if (intentosLocales.size() >= MAX_CLAVES_LOCALES) {
+            purgarSiHaPasadoUnSegundo();
+            if (intentosLocales.size() >= MAX_CLAVES_LOCALES && !intentosLocales.containsKey(key)) {
+                return;
+            }
+        }
+        LocalDateTime ahora = LocalDateTime.now();
         intentosLocales.compute(key, (k, info) -> {
             if (info == null) {
-                return new IntentoInfo();
+                info = new IntentoInfo();
             }
-            if (info.bloqueadoHasta != null && LocalDateTime.now().isAfter(info.bloqueadoHasta)) {
-                info.intentos = 1;
+            // La ventana de conteo y el bloqueo duran 15 minutos desde el primer fallo / desde el bloqueo
+            boolean reiniciar = info.bloqueadoHasta != null
+                    ? ahora.isAfter(info.bloqueadoHasta)
+                    : info.ventanaDesde.plusMinutes(BLOQUEO_MINUTOS).isBefore(ahora);
+            if (reiniciar) {
+                info.intentos = 0;
                 info.bloqueadoHasta = null;
-                info.ultimoFallo = LocalDateTime.now();
-                return info;
+                info.ventanaDesde = ahora;
             }
-
             info.intentos++;
-            info.ultimoFallo = LocalDateTime.now();
-
-            if (info.intentos >= MAX_INTENTOS) {
-                info.bloqueadoHasta = LocalDateTime.now().plusMinutes(BLOQUEO_MINUTOS);
+            if (info.intentos >= maximo) {
+                info.bloqueadoHasta = ahora.plusMinutes(BLOQUEO_MINUTOS);
             }
             return info;
         });
     }
 
-    public void limpiarIntentos(String correo) {
+    /** Tras un inicio de sesión correcto se borran los contadores del par correo+IP y los del correo. */
+    public void limpiarIntentos(String correo, String ip) {
         if (correo == null || correo.isBlank()) return;
-        String key = correo.trim().toLowerCase();
-
-        if (redisTemplate != null) {
-            try {
-                redisTemplate.delete(ATTEMPTS_PREFIX + key);
-                redisTemplate.delete(BLOCKED_PREFIX + key);
-            } catch (Exception ex) {
-                log.warn("Error al limpiar intentos en Redis: {}", ex.getMessage());
+        for (String key : new String[]{clavePar(correo, ip), claveCorreo(correo)}) {
+            if (redisTemplate != null) {
+                try {
+                    redisTemplate.delete(ATTEMPTS_PREFIX + key);
+                    redisTemplate.delete(BLOCKED_PREFIX + key);
+                } catch (Exception ex) {
+                    log.warn("Error al limpiar intentos en Redis: {}", ex.getMessage());
+                }
             }
+            intentosLocales.remove(key);
         }
-
-        intentosLocales.remove(key);
     }
 
-    public boolean estaBloqueado(String correo) {
+    /** true si ese correo está bloqueado desde esa IP, o si acumuló demasiados fallos desde cualquier IP. */
+    public boolean estaBloqueado(String correo, String ip) {
         if (correo == null || correo.isBlank()) return false;
-        String key = correo.trim().toLowerCase();
+        return bloqueada(clavePar(correo, ip)) || bloqueada(claveCorreo(correo));
+    }
 
+    private boolean bloqueada(String key) {
         if (redisTemplate != null) {
             try {
                 Boolean isBlocked = redisTemplate.hasKey(BLOCKED_PREFIX + key);
@@ -129,12 +157,31 @@ public class LoginAttemptService {
         if (info == null || info.bloqueadoHasta == null) {
             return false;
         }
-
         if (LocalDateTime.now().isBefore(info.bloqueadoHasta)) {
             return true;
         }
-
         intentosLocales.remove(key);
         return false;
+    }
+
+    /** Con el mapa lleno, purga a lo sumo una vez por segundo: así llenarlo no obliga a recorrerlo entero en cada intento. */
+    private void purgarSiHaPasadoUnSegundo() {
+        long ahora = System.currentTimeMillis();
+        if (ahora - ultimaPurgaMs >= 1000) {
+            ultimaPurgaMs = ahora;
+            purgarVencidos();
+        }
+    }
+
+    /** Quita de memoria los contadores cuya ventana de 15 minutos ya pasó. */
+    @Scheduled(fixedRate = 600_000)
+    public void purgarVencidos() {
+        LocalDateTime limite = LocalDateTime.now().minusMinutes(BLOQUEO_MINUTOS);
+        intentosLocales.values().removeIf(info -> info.ventanaDesde.isBefore(limite)
+                && (info.bloqueadoHasta == null || info.bloqueadoHasta.isBefore(LocalDateTime.now())));
+    }
+
+    int tamanoLocal() {
+        return intentosLocales.size();
     }
 }

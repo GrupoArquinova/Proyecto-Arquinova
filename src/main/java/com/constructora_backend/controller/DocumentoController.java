@@ -129,6 +129,14 @@ public class DocumentoController {
                 .body(data);
     }
 
+    @GetMapping("/excel/etapas")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @Auditable(accion = "EXPORTAR_EXCEL_ETAPAS", entidad = "DOCUMENTOS", descripcion = "Exportación del reporte de etapas a archivo Excel")
+    @Operation(summary = "Descargar reporte de etapas en Excel", description = "Genera un archivo Excel (.xlsx) con el reporte, su resumen y los filtros usados.")
+    public ResponseEntity<byte[]> descargarEtapasExcel(@ModelAttribute FiltroReporteDTO filtro) throws IOException {
+        return archivo(documentoService.generarEtapasExcel(filtro), "reporte_etapas.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+
     // =========================================================================
     // WORD (.DOCX) - APACHE POI XWPF
     // =========================================================================
@@ -157,6 +165,54 @@ public class DocumentoController {
     // PDF (.PDF) - APACHE PDFBOX
     // =========================================================================
 
+    @GetMapping("/pdf/lotes")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @Auditable(accion = "EXPORTAR_PDF_LOTES", entidad = "DOCUMENTOS", descripcion = "Exportación del reporte de lotes a PDF")
+    @Operation(summary = "Descargar reporte de lotes en PDF", description = "Genera un PDF con el resumen y la tabla completa del reporte, con los filtros usados.")
+    public ResponseEntity<byte[]> descargarLotesPdf(@ModelAttribute FiltroReporteDTO filtro) throws IOException {
+        return archivo(documentoService.generarLotesPdf(filtro), "reporte_lotes.pdf", MediaType.APPLICATION_PDF_VALUE);
+    }
+
+    @GetMapping("/pdf/proyectos")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @Auditable(accion = "EXPORTAR_PDF_PROYECTOS", entidad = "DOCUMENTOS", descripcion = "Exportación del reporte de proyectos a PDF")
+    @Operation(summary = "Descargar reporte de proyectos en PDF", description = "Genera un PDF con el resumen y la tabla completa del reporte, con los filtros usados.")
+    public ResponseEntity<byte[]> descargarProyectosPdf(@ModelAttribute FiltroReporteDTO filtro) throws IOException {
+        return archivo(documentoService.generarProyectosPdf(filtro), "reporte_proyectos.pdf", MediaType.APPLICATION_PDF_VALUE);
+    }
+
+    @GetMapping("/pdf/solicitudes")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @Auditable(accion = "EXPORTAR_PDF_SOLICITUDES", entidad = "DOCUMENTOS", descripcion = "Exportación del reporte de solicitudes a PDF")
+    @Operation(summary = "Descargar reporte de solicitudes en PDF", description = "Genera un PDF con el resumen y la tabla completa del reporte, con los filtros usados.")
+    public ResponseEntity<byte[]> descargarSolicitudesPdf(@ModelAttribute FiltroReporteDTO filtro) throws IOException {
+        return archivo(documentoService.generarSolicitudesPdf(filtro), "reporte_solicitudes.pdf", MediaType.APPLICATION_PDF_VALUE);
+    }
+
+    @GetMapping("/pdf/estados-comerciales")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @Auditable(accion = "EXPORTAR_PDF_ESTADOS", entidad = "DOCUMENTOS", descripcion = "Exportación de estados comerciales a PDF")
+    @Operation(summary = "Descargar reporte de estados comerciales en PDF", description = "Genera un PDF con el resumen y la tabla completa del reporte, con los filtros usados.")
+    public ResponseEntity<byte[]> descargarEstadosComercialesPdf(@ModelAttribute FiltroReporteDTO filtro) throws IOException {
+        return archivo(documentoService.generarEstadosComercialesPdf(filtro), "reporte_estados_comerciales.pdf", MediaType.APPLICATION_PDF_VALUE);
+    }
+
+    @GetMapping("/pdf/etapas")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @Auditable(accion = "EXPORTAR_PDF_ETAPAS", entidad = "DOCUMENTOS", descripcion = "Exportación del reporte de etapas a PDF")
+    @Operation(summary = "Descargar reporte de etapas en PDF", description = "Genera un PDF con el resumen y la tabla completa del reporte, con los filtros usados.")
+    public ResponseEntity<byte[]> descargarEtapasPdf(@ModelAttribute FiltroReporteDTO filtro) throws IOException {
+        return archivo(documentoService.generarEtapasPdf(filtro), "reporte_etapas.pdf", MediaType.APPLICATION_PDF_VALUE);
+    }
+
+    @GetMapping("/pdf/actividad")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @Auditable(accion = "EXPORTAR_PDF_ACTIVIDAD", entidad = "DOCUMENTOS", descripcion = "Exportación de la actividad administrativa a PDF")
+    @Operation(summary = "Descargar reporte de actividad administrativa en PDF", description = "Genera un PDF con el resumen y la tabla completa del reporte, con los filtros usados.")
+    public ResponseEntity<byte[]> descargarActividadPdf(@ModelAttribute FiltroReporteDTO filtro) throws IOException {
+        return archivo(documentoService.generarActividadPdf(filtro), "reporte_actividad.pdf", MediaType.APPLICATION_PDF_VALUE);
+    }
+
     @GetMapping("/pdf/proyecto/{proyectoId}/ficha-tecnica")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Auditable(accion = "GENERAR_PDF_FICHA_TECNICA", entidad = "DOCUMENTOS", descripcion = "Generación de ficha técnica PDF del proyecto")
@@ -175,5 +231,11 @@ public class DocumentoController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ficha_tecnica_proyecto_" + proyectoId + ".pdf")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(data);
+    }
+    private ResponseEntity<byte[]> archivo(byte[] datos, String nombre, String tipo) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + nombre)
+                .contentType(MediaType.parseMediaType(tipo))
+                .body(datos);
     }
 }

@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ "main", "master" ]
 
+# Permisos mínimos del GITHUB_TOKEN: leer el código y publicar el reporte de pruebas (checks)
+permissions:
+  contents: read
+  checks: write
+
 jobs:
   build-and-test:
     name: Build & Run Automated Tests (Java 21)
