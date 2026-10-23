@@ -45,6 +45,9 @@ class SolicitudContactoServiceTest {
     @Mock
     private SolicitudContactoMapper solicitudMapper;
 
+    @Mock
+    private CaptchaService captchaService;
+
     @InjectMocks
     private SolicitudContactoService solicitudService;
 
@@ -57,6 +60,7 @@ class SolicitudContactoServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(captchaService.verificar(any(), any())).thenReturn(true);
         publicDTO = new SolicitudContactoPublicDTO();
         publicDTO.setNombre("Carlos Pérez");
         publicDTO.setCorreo("carlos@example.com");

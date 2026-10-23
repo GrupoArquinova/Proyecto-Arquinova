@@ -21,14 +21,14 @@ Está pensada para quien administra el sitio, no solo para quien programa. Aquí
 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `DB_SSL_MODE`, `JWT_SECRET`, `JWT_EXPIRATION` (3600000 = 1 hora),
 `CORS_ALLOWED_ORIGINS`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`,
 `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`,
-`FLYWAY_ENABLED` (false en Render), `APP_SITIO_URL` (enlace del correo de recuperación de contraseña y de la política de datos; si falta, usa el primer origen de `CORS_ALLOWED_ORIGINS`; cámbiala cuando haya dominio).
+`FLYWAY_ENABLED` (false en Render), `TURNSTILE_SECRET` (clave secreta del captcha; vacía = captcha desactivado, ver 7.4), `APP_SITIO_URL` (enlace del correo de recuperación de contraseña y de la política de datos; si falta, usa el primer origen de `CORS_ALLOWED_ORIGINS`; cámbiala cuando haya dominio).
 **No** definir `APP_DOCS_PUBLICAS` (Swagger debe quedar cerrado). `METRICAS_TOKEN` solo si hay un Prometheus que lo use.
 Cuidado al pegar valores: sin espacios sobrantes y **sin los signos `< >` de las plantillas** (una vez `CLOUDINARY_CLOUD_NAME` quedó como `<dn3s7utod>` y las subidas fallaron con 401).
 
 **Vercel (frontend)**: ninguna. La dirección de la API y los datos públicos de contacto están en `src/environments/environment.ts`.
 
 **GitHub (Settings → Secrets and variables → Actions)**, para el respaldo:
-`AIVEN_DB_HOST`, `AIVEN_DB_PORT`, `AIVEN_DB_USER`, `AIVEN_DB_PASSWORD`, `AIVEN_DB_NAME`, `BACKUP_PASSPHRASE`.
+`AIVEN_DB_HOST`, `AIVEN_DB_PORT`, `AIVEN_DB_USER`, `AIVEN_DB_PASSWORD`, `AIVEN_DB_NAME`, más el cifrado (`BACKUP_AGE_RECIPIENT`, recomendado; o `BACKUP_PASSPHRASE` de 32+ caracteres) y el destino (`BACKUP_S3_BUCKET`, `BACKUP_S3_ENDPOINT`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`). Detalle en la sección 4 ("Respaldos: cifrado y destino").
 Opcionales (pestaña *Variables*): `URL_BACKEND`, `URL_FRONTEND` si cambian los dominios.
 
 ## 3. Publicar una versión
@@ -46,18 +46,15 @@ Opcionales (pestaña *Variables*): `URL_BACKEND`, `URL_FRONTEND` si cambian los 
 ## 4. Respaldos
 
 ### Qué hay
-- **Automático** (`.github/workflows/respaldo-bd.yml`): todos los días a las 03:30 (hora de Colombia). Hace una copia completa de la base, **comprueba que se puede restaurar** (la carga en un MySQL temporal y cuenta tablas, usuarios y proyectos), la **cifra con AES-256** y la guarda **30 días** como artefacto del workflow.
-  El repositorio es público y la base tiene datos personales y hashes de contraseñas: por eso el archivo nunca sale sin cifrar y la clave (`BACKUP_PASSPHRASE`) solo existe en los secrets.
+- **Automático** (`.github/workflows/respaldo-bd.yml`): todos los días a las 03:30 (hora de Colombia). Hace una copia completa de la base, **comprueba que se puede restaurar** (la carga en un MySQL temporal y cuenta tablas, usuarios y proyectos), la **cifra** (`age`, o AES-256 heredado) y la guarda **fuera de la exposición pública**: en un bucket S3/R2 si está configurado, o como artefacto de 30 días solo si el repositorio es privado (en un repo público el workflow falla en vez de publicar el archivo).
+  La base tiene datos personales y hashes de contraseñas: por eso el archivo nunca sale sin cifrar. Ver "Respaldos: cifrado y destino" más abajo.
 - **Manual**: `scripts\respaldar-aiven.ps1` (Windows). Pide la contraseña en pantalla y deja el archivo en `respaldos\` (ignorada por git).
 - **Aiven**: la consola tiene una pestaña *Backups*. Revisa allí qué conserva tu plan; no la tomes como único respaldo.
 - **No están en la base**: las imágenes (Cloudinary guarda las suyas; no las borres desde su consola) y el código (GitHub).
 
 ### Puesta en marcha (una sola vez)
-1. Crear la clave de cifrado y guardarla **también** en un gestor de contraseñas (sin ella los respaldos no se pueden abrir):
-   ```bash
-   openssl rand -base64 48
-   ```
-2. En GitHub → *Settings → Secrets and variables → Actions → New repository secret*: crear los seis secrets de la sección 2.
+1. Crear la clave de cifrado (recomendado `age`, ver "Respaldos: cifrado y destino"; la clave privada se guarda fuera de línea, nunca en GitHub).
+2. En GitHub → *Settings → Secrets and variables → Actions → New repository secret*: crear los secrets de la sección 2 (base de datos, cifrado y destino).
    Para `AIVEN_DB_*` usa los datos de *Connection information* de Aiven.
    Idealmente crea en Aiven un usuario aparte solo para esto, en vez de usar `avnadmin`: le bastan los permisos `SELECT`, `SHOW VIEW`, `TRIGGER` y `EVENT` sobre la base.
 3. Los workflows con horario **solo corren desde la rama por defecto del repositorio** (`main`/`master`). Hasta que ese archivo llegue allí, no se ejecutan solos.
@@ -65,8 +62,8 @@ Opcionales (pestaña *Variables*): `URL_BACKEND`, `URL_FRONTEND` si cambian los 
 4. Revisar que el primer respaldo salga en verde y que en el resumen aparezcan las tablas, usuarios y proyectos restaurados.
 
 ### Descargar y abrir un respaldo
-1. GitHub → *Actions* → el último "Respaldo diario" en verde → *Artifacts* → `respaldo-bd-cifrado`.
-2. Descifrar (en Git Bash o WSL, que traen `openssl`):
+1. Si usas bucket: descarga el último archivo de `respaldos/` desde la consola de R2/S3. Si usas artefacto (repo privado): GitHub → *Actions* → el último "Respaldo diario" en verde → *Artifacts* → `respaldo-bd-cifrado`.
+2. Descifrar. Con `age` (archivo `.sql.gz.age`): `age --decrypt -i clave-privada.txt -o respaldo.sql.gz archivo.sql.gz.age`. Con el método heredado (archivo `.sql.gz.enc`; en Git Bash o WSL, que traen `openssl`):
    ```bash
    openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in respaldo-aiven-AAAAMMDD-HHMM.sql.gz.enc -out respaldo.sql.gz -pass pass:"TU_CLAVE"
    gunzip respaldo.sql.gz        # queda respaldo.sql
@@ -88,6 +85,55 @@ Para **recuperar producción**: el respaldo trae `DROP TABLE IF EXISTS` antes de
 - **Pérdida máxima aceptable (RPO): 24 horas** (frecuencia del respaldo).
 - **Tiempo de recuperación (RTO): 2 horas** (descargar, descifrar, restaurar y verificar).
 - **Probar una restauración real cada trimestre** y anotar la fecha. Un respaldo que nunca se ha restaurado no es un respaldo.
+
+### Respaldos: cifrado y destino
+
+**Por qué cambió.** Un artefacto de GitHub Actions de un repositorio público lo puede descargar cualquier usuario de GitHub con sesión iniciada. Aunque esté cifrado, no debe quedar a su alcance: un passphrase débil o filtrado lo abriría, y con AES-CBC no hay autenticación del archivo. Ahora el cifrado es con `age` (clave pública en GitHub, privada solo tuya) y el destino es un bucket privado.
+
+**Qué hace el workflow** (`.github/workflows/respaldo-bd.yml`), antes de tocar la base:
+| Situación | Resultado |
+| --- | --- |
+| Existe `BACKUP_AGE_RECIPIENT` | Cifra con `age` (archivo `.sql.gz.age`). |
+| No existe y `BACKUP_PASSPHRASE` tiene 32+ caracteres | Cifra con openssl AES-256-CBC (`.sql.gz.enc`) y deja un **aviso**: migra a `age`. |
+| No existe y la passphrase falta o tiene menos de 32 caracteres | **Falla.** |
+| Existen los cuatro secrets del bucket | Sube el cifrado al bucket y **no** publica artefacto. |
+| Faltan algunos (pero no todos) los secrets del bucket | **Falla** (configuración incompleta). |
+| Sin bucket y repositorio privado | Publica el artefacto 30 días. |
+| Sin bucket y repositorio público | **Falla** con un mensaje que explica qué configurar. |
+
+**1. Crear un bucket gratuito en Cloudflare R2**
+1. Cuenta en Cloudflare → *R2 Object Storage* → *Create bucket* (por ejemplo `arquinova-respaldos`; ubicación automática). El plan gratuito incluye 10 GB; R2 pide registrar una tarjeta aunque no se cobre dentro del gratuito.
+2. Deja el bucket **privado** (no actives *Public access* ni dominio personalizado).
+3. En el bucket → *Settings → Object lifecycle rules → Add rule*: borrar objetos con prefijo `respaldos/` a los **30 días**. Esa regla es la retención (el workflow no borra nada por sí mismo).
+4. *R2 → Manage R2 API Tokens → Create API token*: permiso **Object Read & Write**, limitado a ese bucket. Copia *Access Key ID*, *Secret Access Key* y la dirección S3 (`https://<ID_DE_CUENTA>.r2.cloudflarestorage.com`). El secreto solo se muestra una vez.
+5. En GitHub → *Settings → Secrets and variables → Actions* crea: `BACKUP_S3_BUCKET` (nombre del bucket), `BACKUP_S3_ENDPOINT` (la dirección anterior, con `https://`), `AWS_ACCESS_KEY_ID` y `AWS_SECRET_ACCESS_KEY`. Cualquier servicio compatible con S3 sirve igual (Backblaze B2, Wasabi, AWS S3).
+
+**2. Generar la clave `age`** (en tu computador, nunca en GitHub)
+```bash
+age-keygen -o clave-respaldos.txt        # imprime "Public key: age1..."
+```
+- Instalar `age`: Windows `winget install FiloSottile.age`; Linux `apt install age`; macOS `brew install age`.
+- El archivo `clave-respaldos.txt` contiene la clave **privada** (`AGE-SECRET-KEY-...`): guárdalo **fuera de línea** (memoria USB en un lugar seguro, más una copia en el gestor de contraseñas). Sin él los respaldos no se pueden abrir y nadie, ni GitHub ni Cloudflare, puede recuperarlo. No lo subas a git ni lo pegues en un chat.
+- En GitHub crea el secret `BACKUP_AGE_RECIPIENT` con **solo la clave pública** (la línea `age1...`).
+- Cuando `BACKUP_AGE_RECIPIENT` funcione, borra `BACKUP_PASSPHRASE`.
+
+**3. Probar el workflow y la restauración**
+1. *Actions → Respaldo diario → Run workflow*. Revisa que pase en verde; el log dice si usó `age` y que subió al bucket (sin imprimir nombres de bucket ni claves).
+2. Descarga el archivo de la consola de R2 (bucket → `respaldos/`) a una carpeta temporal.
+3. Descifra e importa en una base de prueba (nunca directamente en producción):
+   ```bash
+   age --decrypt -i clave-respaldos.txt -o respaldo.sql.gz respaldo-aiven-AAAAMMDD-HHMM.sql.gz.age
+   gunzip respaldo.sql.gz
+   mysql --host=HOST --port=PUERTO --user=USUARIO --ssl-mode=REQUIRED -p prueba_restauracion < respaldo.sql
+   ```
+4. Comprueba tablas, usuarios y proyectos (por ejemplo `SELECT COUNT(*) FROM usuarios;`), anota la fecha de la prueba y borra `respaldo.sql` (contiene datos personales) y la base de prueba.
+
+**4. Rotación**
+- **Clave `age`** (cada año o si sospechas que se filtró la privada): genera un par nuevo con `age-keygen`, actualiza `BACKUP_AGE_RECIPIENT` con la nueva pública y **conserva la privada vieja** mientras existan respaldos cifrados con ella (30 días).
+- **Claves del bucket** (cada 6 meses o si salen del equipo): crea un token nuevo en R2, actualiza `AWS_ACCESS_KEY_ID` y `AWS_SECRET_ACCESS_KEY` en GitHub, lanza el workflow a mano y, si sale en verde, revoca el token viejo.
+- **Passphrase heredada** (solo si aún no migras): `openssl rand -base64 48`; guarda también la vieja para abrir los respaldos anteriores.
+
+**Si alguna vez un respaldo estuvo como artefacto en un repositorio público**, trátalo como expuesto: rota las contraseñas de los usuarios de la aplicación y los secretos de la base, y borra esos artefactos (*Actions → run → Delete artifact*).
 
 ## 5. Monitoreo y alertas
 
@@ -124,7 +170,7 @@ Cada vez que alguien con acceso deja el proyecto, o si una clave se pegó donde 
 1. `JWT_SECRET`: cambiarlo en Render → todas las sesiones se cierran (es lo esperado).
 2. Contraseña de la base: cambiarla en Aiven (*Users*) → actualizar `DB_PASSWORD` en Render y `AIVEN_DB_PASSWORD` en GitHub.
 3. Cloudinary: regenerar la clave en su consola → `CLOUDINARY_API_KEY` y `CLOUDINARY_API_SECRET` en Render.
-4. `BACKUP_PASSPHRASE`: al cambiarla, los respaldos anteriores siguen necesitando la clave vieja; conserva ambas anotadas.
+4. `BACKUP_AGE_RECIPIENT` / `BACKUP_PASSPHRASE` (ver "Respaldos: cifrado y destino"): al cambiarlas, los respaldos anteriores siguen necesitando la clave vieja; conserva ambas anotadas.
 
 ### 7.1 Rotación de secretos tras exposición en git
 
@@ -175,11 +221,18 @@ Sin esto el backend no arranca (`Schema-validation: missing column`). Las filas 
 - La confirmación al visitante no repite su mensaje; solo lo saluda con su nombre saneado. Hay tope global de confirmaciones (`APP_CONTACTO_CONFIRMACIONES_MAX_HORA`, por defecto 60, y `..._MAX_DIA`, por defecto 300) además de 1 por hora por dirección.
 - **Retención**: cada día a las 03:00 se eliminan las solicitudes con más de `APP_RETENCION_SOLICITUDES_MESES` meses (por defecto 24; `0` desactiva); en el log solo queda la cantidad.
 - **Atender a un titular de datos** (consulta, supresión): `DELETE /api/solicitudes-contacto/por-correo?correo=persona@ejemplo.com` con sesión de administrador; borra todas las solicitudes de ese correo, responde `{"eliminadas": N}` y queda en la auditoría.
-- **Captcha (pendiente, punto de extensión)**: no está implementado porque requiere una cuenta de Cloudflare Turnstile (o reCAPTCHA). Cuando exista: (1) el frontend agrega el widget y envía el token como campo `captchaToken` en `POST /api/solicitudes-contacto/publico`; (2) en `SolicitudContactoController.crearPublica` (o un filtro antes de `RateLimitingFilter`) se valida el token con `https://challenges.cloudflare.com/turnstile/v0/siteverify` usando una variable `TURNSTILE_SECRET` (en Render, nunca en git) y la IP del visitante, y se responde 400 si no es válido; (3) añadir `challenges.cloudflare.com` a la CSP de `vercel.json`. Mientras tanto protegen el formulario: límite por IP (100/min) y global (60/min), honeypot, topes de confirmación y el límite de tamaño.
+- **Captcha (Cloudflare Turnstile, implementado y desactivado hasta tener las llaves)**: `CaptchaService` verifica en el servidor el token del widget contra `https://challenges.cloudflare.com/turnstile/v0/siteverify` (timeout de 5 s) con la IP real del visitante. Se evalúa en `POST /api/solicitudes-contacto/publico` **después** del honeypot y **antes** de guardar nada o enviar correos. Si falla responde 400 con el mensaje genérico "Verificación de seguridad no superada". El token y el secreto nunca se escriben en el log.
+  - **Sin `TURNSTILE_SECRET` el captcha queda desactivado** (todo envío pasa), así el sitio sigue funcionando hasta que existan las llaves.
+  - Si Cloudflare no responde: por defecto (`TURNSTILE_FALLO_ABIERTO=false`) se rechaza con 503 "No se pudo verificar; intenta de nuevo". Con `true` se deja pasar el formulario (prefiere disponibilidad sobre protección; los demás límites siguen activos).
+  - **Crear el widget**: Cloudflare → *Turnstile → Add widget*; nombre "Arquinova contacto"; dominios (hostnames) del sitio (el de Vercel y, cuando exista, el dominio propio; añade `localhost` solo para desarrollo); modo *Managed*. Cloudflare entrega una **Site key** (pública) y una **Secret key**.
+  - **Backend (Render → Environment)**: `TURNSTILE_SECRET` = la Secret key (y opcionalmente `TURNSTILE_FALLO_ABIERTO`). En local, en `.env`. Nunca en git.
+  - **Frontend**: la Site key (pública) se pone en `src/environments/environment*.ts`; el formulario carga el script de Turnstile, muestra el widget y envía el token como campo `captchaToken` en el cuerpo de `POST /api/solicitudes-contacto/publico`. Añadir `https://challenges.cloudflare.com` a `script-src`, `frame-src` y `connect-src` de la CSP de `vercel.json`. Para probar con llaves de prueba de Cloudflare: site key `1x00000000000000000000AA` (siempre pasa) o `2x00000000000000000000AB` (siempre falla), con el secreto de pruebas de la documentación de Cloudflare.
+  - Orden recomendado: desplegar el frontend con el widget **primero**, y solo después poner `TURNSTILE_SECRET` en Render; si se hace al revés, el formulario público devolverá 400 hasta que el frontend envíe el token.
+  - Mientras tanto, y además del captcha, protegen el formulario: límite por IP (100/min) y global (60/min), honeypot, topes de confirmación y el límite de tamaño.
 
 ### 7.5 Variables de entorno nuevas (todas opcionales, con valor por defecto)
 
-`JWT_SESION_MAXIMA_HORAS` (12), `APP_MAX_CUERPO_BYTES` (65536), `APP_LEGAL_VERSION_POLITICA` (2026-10), `APP_RETENCION_SOLICITUDES_MESES` (24), `APP_RETENCION_CRON` (`0 0 3 * * *`), `APP_CONTACTO_CONFIRMACIONES_MAX_HORA` (60), `APP_CONTACTO_CONFIRMACIONES_MAX_DIA` (300), `GEMINI_RESPUESTA_SEGUNDOS` (10), `GEMINI_CONCURRENCIA_MAXIMA` (5), `GEMINI_CUOTA_DIARIA` (1000; 0 = sin tope).
+`JWT_SESION_MAXIMA_HORAS` (12), `APP_MAX_CUERPO_BYTES` (65536), `APP_LEGAL_VERSION_POLITICA` (2026-10), `APP_RETENCION_SOLICITUDES_MESES` (24), `APP_RETENCION_CRON` (`0 0 3 * * *`), `APP_CONTACTO_CONFIRMACIONES_MAX_HORA` (60), `APP_CONTACTO_CONFIRMACIONES_MAX_DIA` (300), `GEMINI_RESPUESTA_SEGUNDOS` (10), `GEMINI_CONCURRENCIA_MAXIMA` (5), `GEMINI_CUOTA_DIARIA` (1000; 0 = sin tope), `TURNSTILE_SECRET` (vacío = captcha desactivado), `TURNSTILE_FALLO_ABIERTO` (false).
 `APP_CONTACTO_CORREO_AVISO` **ya no tiene valor por defecto**: definirlo en Render (correo que recibe los avisos de nuevas solicitudes).
 
 ## 8. Antes de publicar el sitio de verdad

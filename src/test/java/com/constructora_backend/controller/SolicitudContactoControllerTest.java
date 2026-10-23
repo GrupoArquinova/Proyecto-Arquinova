@@ -76,6 +76,56 @@ class SolicitudContactoControllerTest {
     }
 
     @Test
+    @DisplayName("POST /publico acepta captchaToken y se lo pasa al servicio")
+    void captchaTokenLlegaAlServicio() throws Exception {
+        when(solicitudService.crearPublica(any(), any(), any())).thenReturn(new SolicitudContactoResponseDTO());
+
+        mockMvc.perform(post("/api/solicitudes-contacto/publico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombre\":\"Ana\",\"correo\":\"ana@test.com\",\"consentimientoDatos\":true,\"captchaToken\":\"tok-123\"}"))
+                .andExpect(status().isCreated());
+
+        org.mockito.ArgumentCaptor<SolicitudContactoPublicDTO> dto = org.mockito.ArgumentCaptor.forClass(SolicitudContactoPublicDTO.class);
+        verify(solicitudService).crearPublica(dto.capture(), any(), any());
+        org.junit.jupiter.api.Assertions.assertEquals("tok-123", dto.getValue().getCaptchaToken());
+    }
+
+    @Test
+    @DisplayName("POST /publico con captchaToken de más de 2048 caracteres responde 400")
+    void captchaTokenLargoSeRechaza() throws Exception {
+        mockMvc.perform(post("/api/solicitudes-contacto/publico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombre\":\"Ana\",\"correo\":\"ana@test.com\",\"consentimientoDatos\":true,\"captchaToken\":\"" + "a".repeat(2049) + "\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /publico con captcha no superado responde 400 con mensaje genérico")
+    void captchaFallidoResponde400() throws Exception {
+        when(solicitudService.crearPublica(any(), any(), any()))
+                .thenThrow(new com.constructora_backend.exception.BadRequestException("Verificación de seguridad no superada"));
+
+        mockMvc.perform(post("/api/solicitudes-contacto/publico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CUERPO))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje").value("Verificación de seguridad no superada"));
+    }
+
+    @Test
+    @DisplayName("POST /publico con Cloudflare caído (fallo cerrado) responde 503")
+    void captchaNoDisponibleResponde503() throws Exception {
+        when(solicitudService.crearPublica(any(), any(), any()))
+                .thenThrow(new com.constructora_backend.exception.ServicioNoDisponibleException("No se pudo verificar; intenta de nuevo"));
+
+        mockMvc.perform(post("/api/solicitudes-contacto/publico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CUERPO))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.mensaje").value("No se pudo verificar; intenta de nuevo"));
+    }
+
+    @Test
     @DisplayName("POST /publico con saltos de línea en el nombre responde 400")
     void nombreConSaltosDeLineaSeRechaza() throws Exception {
         mockMvc.perform(post("/api/solicitudes-contacto/publico")

@@ -1,22 +1,38 @@
 name: Respaldo diario de la base de datos (Aiven)
 
 # Todos los días a las 03:30 hora de Colombia (08:30 UTC) saca una copia completa de la base de datos, comprueba que se puede
-# restaurar (la carga en un MySQL 8.4 temporal), la cifra y la guarda 30 días como artefacto del workflow.
+# restaurar (la carga en un MySQL 8.4 temporal), la cifra y la guarda fuera de la exposición pública.
 # También se puede lanzar a mano desde la pestaña Actions ("Run workflow").
 #
-# IMPORTANTE: el repositorio es público y la base contiene datos personales (solicitudes de contacto) y hashes de contraseñas.
-# Por eso el respaldo se cifra con AES-256 ANTES de subirlo y la clave vive solo en los secrets del repositorio.
-# Si el workflow falla, GitHub envía un correo a quien editó por última vez el cron.
+# La base contiene datos personales (solicitudes de contacto) y hashes de contraseñas, así que el respaldo SIEMPRE se cifra
+# ANTES de salir del runner. Sin importar el método, en un repositorio PÚBLICO los artefactos de Actions los puede descargar
+# cualquier usuario de GitHub: por eso en un repo público este workflow exige un bucket S3/R2 y falla si no está configurado.
 #
-# Secrets necesarios (Settings > Secrets and variables > Actions):
-#   AIVEN_DB_HOST, AIVEN_DB_PORT, AIVEN_DB_USER, AIVEN_DB_PASSWORD, AIVEN_DB_NAME, BACKUP_PASSPHRASE
-# Ver docs/OPERACION.md para restaurar un respaldo.
+# CIFRADO (elige uno)
+#   - Recomendado: `age` (cifrado autenticado con clave pública). Secret BACKUP_AGE_RECIPIENT = la clave pública (age1...).
+#     La clave privada la guarda el usuario fuera de línea; GitHub nunca la ve.
+#   - Compatibilidad: si no existe BACKUP_AGE_RECIPIENT se usa openssl AES-256-CBC con BACKUP_PASSPHRASE (mínimo 32 caracteres;
+#     con menos el workflow falla). Es un método más débil (sin autenticación y la clave vive en GitHub): migra a age.
+#
+# DESTINO (en este orden)
+#   1. Bucket S3 compatible (Cloudflare R2, etc.) si existen TODOS: BACKUP_S3_BUCKET, BACKUP_S3_ENDPOINT, AWS_ACCESS_KEY_ID,
+#      AWS_SECRET_ACCESS_KEY. NO se publica ningún artefacto. Retención: regla de ciclo de vida del bucket (30 días).
+#   2. Artefacto del workflow (30 días) SOLO si el repositorio es privado.
+#   3. Repositorio público sin bucket: el workflow falla con un mensaje que explica qué configurar.
+#
+# Secrets (Settings > Secrets and variables > Actions):
+#   Siempre:  AIVEN_DB_HOST, AIVEN_DB_PORT, AIVEN_DB_USER, AIVEN_DB_PASSWORD, AIVEN_DB_NAME
+#   Cifrado:  BACKUP_AGE_RECIPIENT (recomendado)  o  BACKUP_PASSPHRASE (>= 32 caracteres)
+#   Destino:  BACKUP_S3_BUCKET, BACKUP_S3_ENDPOINT, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (opcional si el repo es privado)
+# Si el workflow falla, GitHub envía un correo a quien editó por última vez el cron.
+# Ver docs/OPERACION.md ("Respaldos: cifrado y destino") para crear el bucket, las claves y probar la restauración.
 
 on:
   schedule:
     - cron: "30 8 * * *"
   workflow_dispatch:
 
+# Permisos mínimos del GITHUB_TOKEN: este workflow no necesita ni siquiera clonar el repositorio
 permissions:
   contents: read
 
@@ -27,7 +43,7 @@ concurrency:
 jobs:
   respaldo:
     name: Respaldar, verificar y cifrar
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
       mysql:
@@ -43,23 +59,77 @@ jobs:
           --health-timeout=5s
           --health-retries=12
     env:
+      # Solo lo necesario para todo el job; las claves de cifrado y del bucket se pasan únicamente a los pasos que las usan
       AIVEN_DB_HOST: ${{ secrets.AIVEN_DB_HOST }}
       AIVEN_DB_PORT: ${{ secrets.AIVEN_DB_PORT }}
       AIVEN_DB_USER: ${{ secrets.AIVEN_DB_USER }}
       AIVEN_DB_NAME: ${{ secrets.AIVEN_DB_NAME }}
       MYSQL_PWD: ${{ secrets.AIVEN_DB_PASSWORD }}
-      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
     steps:
-      - name: Comprobar que están los secretos
+      - name: Decidir método de cifrado y destino (antes de tocar la base)
+        env:
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          REPO_PRIVADO: ${{ github.event.repository.private }}
         run: |
-          faltan=0
-          for nombre in AIVEN_DB_HOST AIVEN_DB_PORT AIVEN_DB_USER AIVEN_DB_NAME MYSQL_PWD BACKUP_PASSPHRASE; do
-            if [ -z "${!nombre}" ]; then echo "::error::Falta el secret para $nombre"; faltan=1; fi
-          done
-          [ "$faltan" = "0" ] || exit 1
+          set -euo pipefail
+          error=0
 
-      - name: Instalar el cliente de MySQL
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq mysql-client
+          # --- Base de datos ---
+          for nombre in AIVEN_DB_HOST AIVEN_DB_PORT AIVEN_DB_USER AIVEN_DB_NAME MYSQL_PWD; do
+            if [ -z "${!nombre}" ]; then echo "::error::Falta el secret para $nombre"; error=1; fi
+          done
+
+          # --- Cifrado ---
+          if [ -n "$BACKUP_AGE_RECIPIENT" ]; then
+            case "$BACKUP_AGE_RECIPIENT" in
+              age1*) echo "METODO=age" >> "$GITHUB_ENV" ;;
+              *) echo "::error::BACKUP_AGE_RECIPIENT debe ser una clave PÚBLICA de age (empieza por age1). Nunca pongas aquí la clave privada (AGE-SECRET-KEY-...)."; error=1 ;;
+            esac
+          else
+            echo "::warning::No existe BACKUP_AGE_RECIPIENT: se usa el método heredado (openssl AES-256-CBC con passphrase). Crea una clave age (age-keygen) y guarda la pública en el secret BACKUP_AGE_RECIPIENT; ver docs/OPERACION.md."
+            if [ -z "$BACKUP_PASSPHRASE" ]; then
+              echo "::error::Falta cifrado: define BACKUP_AGE_RECIPIENT (recomendado) o BACKUP_PASSPHRASE (mínimo 32 caracteres)"; error=1
+            elif [ "${#BACKUP_PASSPHRASE}" -lt 32 ]; then
+              echo "::error::BACKUP_PASSPHRASE tiene menos de 32 caracteres. Genera una nueva con: openssl rand -base64 48"; error=1
+            else
+              echo "METODO=openssl" >> "$GITHUB_ENV"
+            fi
+          fi
+
+          # --- Destino ---
+          s3_definidos=0
+          for nombre in BACKUP_S3_BUCKET BACKUP_S3_ENDPOINT AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            if [ -n "${!nombre}" ]; then s3_definidos=$((s3_definidos + 1)); fi
+          done
+          if [ "$s3_definidos" -eq 4 ]; then
+            case "$BACKUP_S3_ENDPOINT" in
+              https://*) echo "DESTINO=s3" >> "$GITHUB_ENV" ;;
+              *) echo "::error::BACKUP_S3_ENDPOINT debe empezar por https://"; error=1 ;;
+            esac
+          elif [ "$s3_definidos" -gt 0 ]; then
+            echo "::error::Configuración de bucket incompleta: hacen falta los cuatro secrets BACKUP_S3_BUCKET, BACKUP_S3_ENDPOINT, AWS_ACCESS_KEY_ID y AWS_SECRET_ACCESS_KEY (o ninguno)."; error=1
+          elif [ "$REPO_PRIVADO" = "true" ]; then
+            echo "DESTINO=artefacto" >> "$GITHUB_ENV"
+            echo "::notice::Sin bucket configurado: el respaldo cifrado se publicará como artefacto de Actions (el repositorio es privado)."
+          else
+            echo "::error::Este repositorio es PÚBLICO y no hay bucket configurado: un artefacto de Actions lo podría descargar cualquier usuario de GitHub, así que no se publica. Configura los secrets BACKUP_S3_BUCKET, BACKUP_S3_ENDPOINT, AWS_ACCESS_KEY_ID y AWS_SECRET_ACCESS_KEY (por ejemplo con Cloudflare R2, gratis) o vuelve privado el repositorio. Guía: docs/OPERACION.md, sección 'Respaldos: cifrado y destino'."
+            error=1
+          fi
+
+          [ "$error" = "0" ] || exit 1
+
+      - name: Instalar los clientes necesarios
+        run: |
+          set -euo pipefail
+          paquetes="mysql-client"
+          if [ "$METODO" = "age" ]; then paquetes="$paquetes age"; fi
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq $paquetes
 
       - name: Sacar la copia de la base de datos
         run: |
@@ -85,18 +155,44 @@ jobs:
           [ "$tablas" -ge 15 ] || { echo "::error::Pocas tablas ($tablas): la copia está incompleta"; exit 1; }
           [ "$usuarios" -ge 1 ] || { echo "::error::No hay usuarios en la copia"; exit 1; }
 
-      - name: Cifrar la copia (AES-256)
+      - name: Cifrar la copia
+        env:
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
         run: |
           set -euo pipefail
           fecha=$(date -u +%Y%m%d-%H%M)
-          openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in respaldo.sql.gz -out "respaldo-aiven-$fecha.sql.gz.enc" -pass env:BACKUP_PASSPHRASE
+          if [ "$METODO" = "age" ]; then
+            # Cifrado autenticado con clave pública: aquí no existe ninguna clave capaz de abrir el archivo
+            age --recipient "$BACKUP_AGE_RECIPIENT" --output "respaldo-aiven-$fecha.sql.gz.age" respaldo.sql.gz
+            echo "ARCHIVO=respaldo-aiven-$fecha.sql.gz.age" >> "$GITHUB_ENV"
+          else
+            openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in respaldo.sql.gz -out "respaldo-aiven-$fecha.sql.gz.enc" -pass env:BACKUP_PASSPHRASE
+            echo "ARCHIVO=respaldo-aiven-$fecha.sql.gz.enc" >> "$GITHUB_ENV"
+          fi
           shred -u respaldo.sql.gz
-          ls -l respaldo-aiven-*.enc
+          ls -l respaldo-aiven-*
 
-      - name: Guardar el respaldo cifrado (30 días)
-        uses: actions/upload-artifact@v4
+      - name: Subir el respaldo cifrado al bucket (S3/R2)
+        if: env.DESTINO == 's3'
+        env:
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # Cloudflare R2 usa la región "auto"; otros servicios compatibles la ignoran
+          AWS_DEFAULT_REGION: auto
+        run: |
+          set -euo pipefail
+          # aws-cli ya viene instalada en el runner. No se imprime nada del bucket ni de las claves.
+          aws s3 cp "$ARCHIVO" "s3://${BACKUP_S3_BUCKET}/respaldos/$ARCHIVO" --endpoint-url "$BACKUP_S3_ENDPOINT" --only-show-errors
+          echo "Respaldo cifrado subido al bucket configurado. La retención de 30 días la aplica la regla de ciclo de vida del bucket (ver docs/OPERACION.md)."
+
+      - name: Guardar el respaldo cifrado como artefacto (30 días, solo repositorio privado)
+        if: env.DESTINO == 'artefacto'
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: respaldo-bd-cifrado
-          path: respaldo-aiven-*.sql.gz.enc
+          path: respaldo-aiven-*
           retention-days: 30
           if-no-files-found: error

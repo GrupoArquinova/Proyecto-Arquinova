@@ -31,12 +31,14 @@ public class EstadoLoteController {
     }
 
     @GetMapping("/activos")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Listar estados activos", description = "Obtiene los estados que están actualmente activos")
     public ResponseEntity<List<EstadoLoteResponseDTO>> listarActivos() {
         return ResponseEntity.ok(estadoLoteService.listarActivos());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Obtener estado por ID", description = "Retorna los detalles de un estado")
     public ResponseEntity<EstadoLoteResponseDTO> obtenerPorId(@PathVariable Integer id) {
         return estadoLoteService.obtenerPorId(id)

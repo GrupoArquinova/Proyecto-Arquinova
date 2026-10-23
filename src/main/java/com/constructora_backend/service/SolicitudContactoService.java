@@ -54,6 +54,9 @@ public class SolicitudContactoService {
     @Autowired
     private EmailService emailService; // Inyección de tu servicio de correo con RabbitMQ y Circuit Breaker
 
+    @Autowired
+    private CaptchaService captchaService;
+
     /** Versión de la política de tratamiento de datos vigente; queda guardada con el consentimiento (APP_LEGAL_VERSION_POLITICA). */
     @Value("${app.legal.version-politica:2026-10}")
     private String versionPolitica = "2026-10";
@@ -105,6 +108,12 @@ public class SolicitudContactoService {
         if (dto.esRobot()) {
             log.info("Solicitud pública descartada: el campo trampa vino con texto");
             return SolicitudContactoMapper.respuestaDescartada(dto);
+        }
+
+        // Captcha (Turnstile): antes de tocar la base o enviar correos. Desactivado si no hay TURNSTILE_SECRET.
+        if (!captchaService.verificar(dto.getCaptchaToken(), ip)) {
+            log.info("Solicitud pública rechazada: verificación de seguridad no superada");
+            throw new com.constructora_backend.exception.BadRequestException("Verificación de seguridad no superada");
         }
 
         EstadoSolicitud estadoInicial = estadoSolicitudRepository.findFirstByNombreIgnoreCase(ESTADO_NUEVO)

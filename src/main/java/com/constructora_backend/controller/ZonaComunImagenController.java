@@ -27,6 +27,7 @@ public class ZonaComunImagenController {
 
     @Operation(summary = "Listar imágenes por zona común", description = "Obtiene todas las imágenes asociadas a una zona común ordenadas por orden")
     @GetMapping("/zona-comun/{zonaComunId}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<List<ZonaComunImagenResponseDTO>> listarPorZonaComun(@PathVariable Long zonaComunId, Authentication authentication) {
         // Sin sesión de administrador solo las imágenes de zonas publicadas y activas (de un proyecto publicado y activo)
         return ResponseEntity.ok(UserSecurityHelper.esAdmin(authentication)
@@ -36,6 +37,7 @@ public class ZonaComunImagenController {
 
     @Operation(summary = "Obtener imagen por ID", description = "Obtiene los detalles de una imagen por su ID único")
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<ZonaComunImagenResponseDTO> obtenerPorId(@PathVariable Long id, Authentication authentication) {
         return (UserSecurityHelper.esAdmin(authentication) ? imagenService.obtenerPorId(id) : imagenService.obtenerPublicaPorId(id))
                 .map(ResponseEntity::ok)

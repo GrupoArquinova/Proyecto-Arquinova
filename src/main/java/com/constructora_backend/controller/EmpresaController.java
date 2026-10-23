@@ -36,6 +36,7 @@ public class EmpresaController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Listar empresas", description = "Retorna el catálogo de empresas registradas. Permite filtrar por solo activas mediante query parameter.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Lista recuperada exitosamente",
@@ -49,6 +50,7 @@ public class EmpresaController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Obtener empresa por ID", description = "Retorna la información detallada de una empresa específica según su ID.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Empresa encontrada",

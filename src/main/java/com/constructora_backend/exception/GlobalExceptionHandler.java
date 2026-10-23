@@ -57,6 +57,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
+    @ExceptionHandler(ServicioNoDisponibleException.class)
+    public ResponseEntity<ErrorResponseDTO> handleServicioNoDisponible(ServicioNoDisponibleException ex, HttpServletRequest request) {
+        ErrorResponseDTO errorResponse = ErrorResponseDTO.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .error(HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase())
+                .mensaje(ex.getMessage())
+                .path(request.getRequestURI())
+                .correlationId(resolveCorrelationId(request))
+                .build();
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(errorResponse);
+    }
+
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ErrorResponseDTO> handleDuplicateResource(DuplicateResourceException ex, HttpServletRequest request) {
         ErrorResponseDTO errorResponse = ErrorResponseDTO.builder()

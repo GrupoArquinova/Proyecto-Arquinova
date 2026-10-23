@@ -24,12 +24,14 @@ public class EtapaController {
     private EtapaService etapaService;
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Listar todas las etapas", description = "Obtiene una lista de todas las etapas")
     public ResponseEntity<List<EtapaResponseDTO>> listarTodas() {
         return ResponseEntity.ok(etapaService.listarTodas());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Obtener etapa por ID", description = "Obtiene los detalles de una etapa específica")
     public ResponseEntity<EtapaResponseDTO> obtenerPorId(@PathVariable Long id) {
         return etapaService.obtenerPorId(id)
@@ -38,6 +40,7 @@ public class EtapaController {
     }
 
     @GetMapping("/proyecto/{proyectoId}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Listar etapas por proyecto", description = "Obtiene las etapas asociadas a un proyecto")
     public ResponseEntity<List<EtapaResponseDTO>> listarPorProyecto(
             @PathVariable Long proyectoId,

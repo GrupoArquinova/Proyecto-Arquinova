@@ -33,6 +33,7 @@ public class MultimediaController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Obtener multimedia por ID", description = "Retorna los detalles y metadatos de un recurso multimedia específico")
     public ResponseEntity<MultimediaResponseDTO> obtenerPorId(@PathVariable Long id) {
         return ResponseEntity.ok(multimediaService.obtenerPorId(id));
@@ -52,6 +53,7 @@ public class MultimediaController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Listar toda la multimedia", description = "Retorna una lista con todos los recursos multimedia registrados en el sistema")
     public ResponseEntity<List<MultimediaResponseDTO>> listarTodos() {
         return ResponseEntity.ok(multimediaService.listarTodos());

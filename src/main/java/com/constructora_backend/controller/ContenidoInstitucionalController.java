@@ -44,6 +44,7 @@ public class ContenidoInstitucionalController {
     // ───── LISTAR TODOS ─────
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Listar todos los contenidos institucionales",
                description = "Retorna todos los contenidos institucionales registrados en el sistema.")
     @ApiResponses(value = {
@@ -80,6 +81,7 @@ public class ContenidoInstitucionalController {
     // ───── OBTENER POR ID ─────
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Obtener contenido institucional por ID",
                description = "Retorna un contenido institucional específico según su ID.")
     @ApiResponses(value = {

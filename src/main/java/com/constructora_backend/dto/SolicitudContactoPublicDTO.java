@@ -58,6 +58,10 @@ public class SolicitudContactoPublicDTO {
      */
     private String sitioWeb;
 
+    /** Token del widget de Cloudflare Turnstile; opcional (solo se exige si el servidor tiene TURNSTILE_SECRET). */
+    @Size(max = 2048, message = "El token de verificación no puede superar los 2048 caracteres")
+    private String captchaToken;
+
     /** Basta con un medio de contacto: teléfono o correo. */
     @JsonIgnore
     @AssertTrue(message = "Debe indicar al menos un telefono o un correo electronico")

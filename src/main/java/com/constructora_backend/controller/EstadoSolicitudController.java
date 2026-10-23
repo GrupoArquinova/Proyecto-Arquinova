@@ -31,12 +31,14 @@ public class EstadoSolicitudController {
     }
 
     @GetMapping("/activos")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Listar estados activos", description = "Obtiene solo los estados de solicitud que están activos")
     public ResponseEntity<List<EstadoSolicitudResponseDTO>> listarActivos(){
         return ResponseEntity.ok(estadoSolicitudService.listarActivos());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(summary = "Obtener estado por ID", description = "Retorna los detalles de un estado de solicitud específico")
     public ResponseEntity<EstadoSolicitudResponseDTO> obtenerPorId(@PathVariable Integer id) {
         return estadoSolicitudService.obtenerPorId(id)

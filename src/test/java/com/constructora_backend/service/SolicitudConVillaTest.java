@@ -33,6 +33,7 @@ class SolicitudConVillaTest {
     @Mock private CasaModeloRepository casaModeloRepository;
     @Mock private UsuarioRepository usuarioRepository;
     @Mock private EmailService emailService;
+    @Mock private CaptchaService captchaService;
     @Spy private SolicitudContactoMapper mapper = new SolicitudContactoMapper();
 
     @InjectMocks private SolicitudContactoService servicio;
@@ -45,6 +46,7 @@ class SolicitudConVillaTest {
         EstadoSolicitud nuevo = new EstadoSolicitud();
         nuevo.setId(1);
         nuevo.setNombre("NUEVO");
+        lenient().when(captchaService.verificar(any(), any())).thenReturn(true);
         lenient().when(estadoSolicitudRepository.findFirstByNombreIgnoreCase("NUEVO")).thenReturn(Optional.of(nuevo));
         lenient().when(solicitudRepository.save(any(SolicitudContacto.class))).thenAnswer(i -> i.getArgument(0));
 

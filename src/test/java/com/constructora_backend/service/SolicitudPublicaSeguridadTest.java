@@ -47,6 +47,7 @@ class SolicitudPublicaSeguridadTest {
     @Mock private CasaModeloRepository casaModeloRepository;
     @Mock private UsuarioRepository usuarioRepository;
     @Mock private EmailService emailService;
+    @Mock private CaptchaService captchaService;
     @Spy private SolicitudContactoMapper mapper = new SolicitudContactoMapper();
 
     @InjectMocks private SolicitudContactoService servicio;
@@ -56,6 +57,7 @@ class SolicitudPublicaSeguridadTest {
         EstadoSolicitud nuevo = new EstadoSolicitud();
         nuevo.setId(1);
         nuevo.setNombre("NUEVO");
+        lenient().when(captchaService.verificar(any(), any())).thenReturn(true);
         lenient().when(estadoSolicitudRepository.findFirstByNombreIgnoreCase("NUEVO")).thenReturn(Optional.of(nuevo));
         lenient().when(solicitudRepository.save(any(SolicitudContacto.class))).thenAnswer(i -> {
             SolicitudContacto s = i.getArgument(0);
@@ -129,6 +131,44 @@ class SolicitudPublicaSeguridadTest {
         verify(solicitudRepository, never()).save(any());
         verifyNoInteractions(emailService);
         verifyNoInteractions(estadoSolicitudRepository);
+    }
+
+    @Test
+    @DisplayName("Captcha no superado: 400 genérico y no se guarda ni se envía nada")
+    void captchaRechazadoNoGuardaNiEnvia() {
+        org.mockito.Mockito.when(captchaService.verificar("token-malo", "203.0.113.9")).thenReturn(false);
+        SolicitudContactoPublicDTO dto = pedido();
+        dto.setCaptchaToken("token-malo");
+
+        com.constructora_backend.exception.BadRequestException ex = org.junit.jupiter.api.Assertions.assertThrows(com.constructora_backend.exception.BadRequestException.class,
+                () -> servicio.crearPublica(dto, "203.0.113.9", "ua"));
+
+        assertEquals("Verificación de seguridad no superada", ex.getMessage());
+        verify(solicitudRepository, never()).save(any());
+        verifyNoInteractions(emailService);
+    }
+
+    @Test
+    @DisplayName("El honeypot se evalúa antes que el captcha: un robot ni siquiera consulta a Cloudflare")
+    void honeypotAntesQueCaptcha() {
+        SolicitudContactoPublicDTO dto = pedido();
+        dto.setSitioWeb("http://spam.example");
+
+        servicio.crearPublica(dto, "203.0.113.9", "bot");
+
+        verifyNoInteractions(captchaService);
+    }
+
+    @Test
+    @DisplayName("Captcha superado: el token y la IP del servidor se pasan a la verificación y la solicitud se guarda")
+    void captchaValidoGuarda() {
+        SolicitudContactoPublicDTO dto = pedido();
+        dto.setCaptchaToken("token-bueno");
+
+        servicio.crearPublica(dto, "203.0.113.9", "ua");
+
+        verify(captchaService).verificar("token-bueno", "203.0.113.9");
+        verify(solicitudRepository).save(any(SolicitudContacto.class));
     }
 
     @Test

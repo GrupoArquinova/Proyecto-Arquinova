@@ -205,6 +205,12 @@ app:
     confirmaciones-max-hora: ${APP_CONTACTO_CONFIRMACIONES_MAX_HORA:60}
     confirmaciones-max-dia: ${APP_CONTACTO_CONFIRMACIONES_MAX_DIA:300}
     whatsapp: ${APP_CONTACTO_WHATSAPP:+57 316 865 3715}
+  # Captcha del formulario público (Cloudflare Turnstile). Sin TURNSTILE_SECRET queda DESACTIVADO (todo token pasa).
+  captcha:
+    turnstile-secret: ${TURNSTILE_SECRET:}
+    # Si Cloudflare no responde: false = rechaza con 503 "intenta de nuevo"; true = deja pasar (prefiere disponibilidad)
+    fallo-abierto: ${TURNSTILE_FALLO_ABIERTO:false}
+    timeout-segundos: 5
   # Versión de la política de tratamiento de datos que se guarda con cada consentimiento
   legal:
     version-politica: ${APP_LEGAL_VERSION_POLITICA:2026-10}
