@@ -15,5 +15,7 @@ public enum TipoMultimedia {
     MAPA,
     // Imagen de fondo de Zonas Comunes › Zonas destacadas (vista aérea o plano con los botones de cada zona)
     ZONAS_DESTACADAS,
+    // Imagen de fondo predeterminada de Amenidades (la que se ve al entrar, antes de elegir una zona)
+    FONDO_AMENIDADES,
     OTRO
 }
