@@ -34,7 +34,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 usuario.getPasswordHash(),
                 Boolean.TRUE.equals(usuario.getActivo()),
                 Collections.singletonList(authority),
-                usuario.getTokenValidoDesde()
+                usuario.getTokenValidoDesde(),
+                usuario.getNombreCompleto()
         );
     }
 }

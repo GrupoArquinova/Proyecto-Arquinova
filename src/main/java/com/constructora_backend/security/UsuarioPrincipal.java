@@ -16,11 +16,24 @@ import java.util.Collection;
 public class UsuarioPrincipal extends User {
 
     private final LocalDateTime tokenValidoDesde;
+    /** Nombre de la persona; viaja en el token para que el panel muestre quién tiene la sesión. */
+    private final String nombreCompleto;
 
     public UsuarioPrincipal(String correo, String passwordHash, boolean activo,
                             Collection<? extends GrantedAuthority> autoridades, LocalDateTime tokenValidoDesde) {
+        this(correo, passwordHash, activo, autoridades, tokenValidoDesde, null);
+    }
+
+    public UsuarioPrincipal(String correo, String passwordHash, boolean activo,
+                            Collection<? extends GrantedAuthority> autoridades, LocalDateTime tokenValidoDesde,
+                            String nombreCompleto) {
         super(correo, passwordHash, activo, true, true, true, autoridades);
         this.tokenValidoDesde = tokenValidoDesde;
+        this.nombreCompleto = nombreCompleto;
+    }
+
+    public String getNombreCompleto() {
+        return nombreCompleto;
     }
 
     public LocalDateTime getTokenValidoDesde() {

@@ -49,6 +49,30 @@ class JwtUtilsTest {
     }
 
     @Test
+    @DisplayName("El token lleva el nombre de la persona (para mostrarlo en el panel) y no lo lleva si el usuario no lo trae")
+    void tokenLlevaElNombreDeLaPersona() {
+        UsuarioPrincipal conNombre = new UsuarioPrincipal("juan@arquinova.com", "x", true, Collections.emptyList(), null, "  Juan Gabriel Londoño  ");
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(conNombre);
+        assertEquals("Juan Gabriel Londoño", cargaDelToken(jwtUtils.generarToken(auth)).get("nombre"));
+        assertEquals("Juan Gabriel Londoño", cargaDelToken(jwtUtils.generarTokenRenovado(conNombre, System.currentTimeMillis())).get("nombre"));
+
+        UserDetails generico = new User("otro@arquinova.com", "x", Collections.emptyList());
+        when(auth.getPrincipal()).thenReturn(generico);
+        assertFalse(cargaDelToken(jwtUtils.generarToken(auth)).containsKey("nombre"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static java.util.Map<String, Object> cargaDelToken(String token) {
+        try {
+            byte[] json = java.util.Base64.getUrlDecoder().decode(token.split("\\.")[1]);
+            return new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, java.util.Map.class);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Test
     @DisplayName("validarToken - Debe retornar true cuando el token es valido")
     void validarToken_Exitoso() {
         UserDetails userDetails = new User("usuario@constructora.com", "password", Collections.emptyList());

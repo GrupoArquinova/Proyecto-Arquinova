@@ -1,6 +1,7 @@
 package com.constructora_backend.security;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -43,7 +44,7 @@ public class JwtUtils {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
         List<String> roles = userPrincipal.getAuthorities().stream().map(a -> a.getAuthority()).toList();
         long ahora = System.currentTimeMillis();
-        return construirToken(userPrincipal.getUsername(), roles, ahora, ahora);
+        return construirToken(userPrincipal.getUsername(), nombreDe(userPrincipal), roles, ahora, ahora);
     }
 
     /**
@@ -53,16 +54,25 @@ public class JwtUtils {
      */
     public String generarTokenRenovado(UserDetails usuario, long sesionInicioMillis) {
         List<String> roles = usuario.getAuthorities().stream().map(a -> a.getAuthority()).toList();
-        return construirToken(usuario.getUsername(), roles, System.currentTimeMillis(), sesionInicioMillis);
+        return construirToken(usuario.getUsername(), nombreDe(usuario), roles, System.currentTimeMillis(), sesionInicioMillis);
     }
 
-    private String construirToken(String correo, Collection<String> roles, long ahoraMillis, long sesionInicioMillis) {
+    /** Nombre de la persona si el usuario lo trae (los UserDetails genéricos, por ejemplo en pruebas, no). */
+    private static String nombreDe(UserDetails usuario) {
+        return usuario instanceof UsuarioPrincipal principal ? principal.getNombreCompleto() : null;
+    }
+
+    private String construirToken(String correo, String nombre, Collection<String> roles, long ahoraMillis, long sesionInicioMillis) {
         Date ahora = new Date(ahoraMillis);
-        return Jwts.builder()
+        JwtBuilder constructor = Jwts.builder()
                 .subject(correo)
                 // Solo para que la interfaz sepa qué mostrar; el backend siempre decide con los roles de la base de datos
                 .claim("roles", roles)
-                .claim(CLAIM_SESION_INICIO, sesionInicioMillis)
+                .claim(CLAIM_SESION_INICIO, sesionInicioMillis);
+        if (nombre != null && !nombre.isBlank()) {
+            constructor.claim("nombre", nombre.trim());     // para mostrar quién tiene la sesión; no se usa para decidir permisos
+        }
+        return constructor
                 .issuedAt(ahora)
                 .expiration(new Date(ahoraMillis + jwtExpirationMs))
                 .signWith(getSigningKey(), Jwts.SIG.HS256)
