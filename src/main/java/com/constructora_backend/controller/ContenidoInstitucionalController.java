@@ -17,6 +17,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.constructora_backend.security.Permisos;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -37,14 +38,14 @@ public class ContenidoInstitucionalController {
     }
 
     private boolean esAdmin(Authentication authentication) {
-        return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_ADMINISTRADOR".equals(a.getAuthority()));
+        // Quien edita contenido (administrador o editor) ve también lo no publicado
+        return Permisos.puedeEditarContenido(authentication);
     }
 
     // ───── LISTAR TODOS ─────
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Operation(summary = "Listar todos los contenidos institucionales",
                description = "Retorna todos los contenidos institucionales registrados en el sistema.")
     @ApiResponses(value = {
@@ -81,7 +82,7 @@ public class ContenidoInstitucionalController {
     // ───── OBTENER POR ID ─────
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Operation(summary = "Obtener contenido institucional por ID",
                description = "Retorna un contenido institucional específico según su ID.")
     @ApiResponses(value = {
@@ -119,7 +120,7 @@ public class ContenidoInstitucionalController {
     // ───── CREAR ─────
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "CREAR_CONTENIDO_INSTITUCIONAL", entidad = "CONTENIDOS_INSTITUCIONALES",
                descripcion = "Registro de nuevo contenido institucional de empresa")
     @Operation(summary = "Crear contenido institucional",
@@ -140,7 +141,7 @@ public class ContenidoInstitucionalController {
     // ───── ACTUALIZAR ─────
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ACTUALIZAR_CONTENIDO_INSTITUCIONAL", entidad = "CONTENIDOS_INSTITUCIONALES",
                descripcion = "Actualización de contenido institucional de empresa")
     @Operation(summary = "Actualizar contenido institucional",
@@ -162,7 +163,7 @@ public class ContenidoInstitucionalController {
     // ───── ELIMINAR ─────
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ELIMINAR_CONTENIDO_INSTITUCIONAL", entidad = "CONTENIDOS_INSTITUCIONALES",
                descripcion = "Eliminación de contenido institucional de empresa")
     @Operation(summary = "Eliminar contenido institucional",

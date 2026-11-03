@@ -34,6 +34,10 @@ public class RateLimitConfig {
     public static final int GENERAL_LIMIT = 500;
     /** El asistente de IA gasta cuota de pago por uso: pocas preguntas por minuto y por IP. */
     public static final int CHAT_LIMIT = 10;
+    /** Analítica sin cookies: una vista de página por navegación, así que el cupo es generoso, pero acotado para que no se infle. */
+    public static final int ANALITICA_LIMIT = 120;
+    /** Generar un brochure PDF cuesta CPU y memoria: pocas descargas por minuto y por IP. */
+    public static final int BROCHURE_LIMIT = 10;
     /** Respaldo global (todas las IP juntas) por minuto para el chat y para el formulario de contacto. */
     public static final int CHAT_GLOBAL_LIMIT = 120;
     public static final int PUBLIC_GLOBAL_LIMIT = 60;
@@ -59,7 +63,7 @@ public class RateLimitConfig {
     private final Map<RateCategory, Bucket> globales = new ConcurrentHashMap<>();
 
     public enum RateCategory {
-        AUTH, PUBLIC, GENERAL, CHAT, NONE
+        AUTH, PUBLIC, GENERAL, CHAT, ANALITICA, BROCHURE, NONE
     }
 
     public RateLimitConfig() {
@@ -121,6 +125,14 @@ public class RateLimitConfig {
             return RateCategory.CHAT;
         }
 
+        if (uri.startsWith("/api/analitica")) {
+            return RateCategory.ANALITICA;
+        }
+
+        if (uri.startsWith("/api/proyectos/") && uri.endsWith("/brochure.pdf")) {
+            return RateCategory.BROCHURE;
+        }
+
         if (uri.startsWith("/v3/api-docs") || uri.startsWith("/swagger-ui")) {
             return RateCategory.NONE;
         }
@@ -149,6 +161,14 @@ public class RateLimitConfig {
             case CHAT -> Bandwidth.builder()
                     .capacity(CHAT_LIMIT)
                     .refillGreedy(CHAT_LIMIT, WINDOW)
+                    .build();
+            case ANALITICA -> Bandwidth.builder()
+                    .capacity(ANALITICA_LIMIT)
+                    .refillGreedy(ANALITICA_LIMIT, WINDOW)
+                    .build();
+            case BROCHURE -> Bandwidth.builder()
+                    .capacity(BROCHURE_LIMIT)
+                    .refillGreedy(BROCHURE_LIMIT, WINDOW)
                     .build();
             case NONE -> Bandwidth.builder()
                     .capacity(Long.MAX_VALUE)
@@ -189,6 +209,8 @@ public class RateLimitConfig {
         if (key.endsWith(":PUBLIC")) return PUBLIC_LIMIT;
         if (key.endsWith(":GENERAL")) return GENERAL_LIMIT;
         if (key.endsWith(":CHAT")) return CHAT_LIMIT;
+        if (key.endsWith(":ANALITICA")) return ANALITICA_LIMIT;
+        if (key.endsWith(":BROCHURE")) return BROCHURE_LIMIT;
         return Long.MAX_VALUE;
     }
 }

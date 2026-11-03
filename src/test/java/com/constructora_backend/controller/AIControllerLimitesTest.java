@@ -47,7 +47,7 @@ class AIControllerLimitesTest {
         AIController controlador = new AIController(aiService, contexto, new LimitadorVentana(), 1, 0);
         CountDownLatch dentro = new CountDownLatch(1);
         CountDownLatch liberar = new CountDownLatch(1);
-        when(aiService.generarRespuesta(any(), any(), any())).thenAnswer(i -> {
+        when(aiService.generarRespuesta(any(), any(), any(), any())).thenAnswer(i -> {
             dentro.countDown();
             liberar.await(10, TimeUnit.SECONDS);
             return "respuesta";
@@ -75,7 +75,7 @@ class AIControllerLimitesTest {
     @DisplayName("El cupo de concurrencia se libera aunque la IA falle")
     void elCupoSeLiberaSiLaIAFalla() {
         AIController controlador = new AIController(aiService, contexto, new LimitadorVentana(), 1, 0);
-        when(aiService.generarRespuesta(any(), any(), any())).thenThrow(new AIServicioNoDisponibleException("falla"));
+        when(aiService.generarRespuesta(any(), any(), any(), any())).thenThrow(new AIServicioNoDisponibleException("falla"));
 
         for (int i = 0; i < 3; i++) {
             assertEquals(503, controlador.chatearConIA(pregunta("hola")).getStatusCode().value(),
@@ -87,20 +87,20 @@ class AIControllerLimitesTest {
     @DisplayName("Cuota diaria global: al agotarse responde 503 sin llamar a la IA")
     void cuotaDiariaAgotada() {
         AIController controlador = new AIController(aiService, contexto, new LimitadorVentana(), 5, 2);
-        when(aiService.generarRespuesta(any(), any(), any())).thenReturn("ok");
+        when(aiService.generarRespuesta(any(), any(), any(), any())).thenReturn("ok");
 
         assertEquals(200, controlador.chatearConIA(pregunta("1")).getStatusCode().value());
         assertEquals(200, controlador.chatearConIA(pregunta("2")).getStatusCode().value());
         assertEquals(503, controlador.chatearConIA(pregunta("3")).getStatusCode().value());
 
-        verify(aiService, times(2)).generarRespuesta(any(), any(), any());
+        verify(aiService, times(2)).generarRespuesta(any(), any(), any(), any());
     }
 
     @Test
     @DisplayName("Una consulta que falló sin dar respuesta no gasta cuota del día")
     void laConsultaFallidaDevuelveLaCuota() {
         AIController controlador = new AIController(aiService, contexto, new LimitadorVentana(), 5, 1);
-        when(aiService.generarRespuesta(any(), any(), any()))
+        when(aiService.generarRespuesta(any(), any(), any(), any()))
                 .thenThrow(new AIServicioNoDisponibleException("falla"))
                 .thenReturn("ok");
 
@@ -112,7 +112,7 @@ class AIControllerLimitesTest {
     @DisplayName("Cuota 0 = sin tope diario")
     void cuotaCeroSinTope() {
         AIController controlador = new AIController(aiService, contexto, new LimitadorVentana(), 5, 0);
-        when(aiService.generarRespuesta(any(), any(), any())).thenReturn("ok");
+        when(aiService.generarRespuesta(any(), any(), any(), any())).thenReturn("ok");
 
         for (int i = 0; i < 50; i++) {
             assertEquals(200, controlador.chatearConIA(pregunta("x")).getStatusCode().value());

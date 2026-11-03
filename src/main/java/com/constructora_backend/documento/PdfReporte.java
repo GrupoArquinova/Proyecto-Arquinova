@@ -40,6 +40,8 @@ public final class PdfReporte implements AutoCloseable {
     private static final float ALTO_LOGO = 38f;
     private static final String RECURSO_LOGO = "/documento/logo-arquinova.jpg";
     private static final float PIE = 40f;
+    /** Espacio extra al pie de cada hoja cuando el documento lleva un aviso (una línea pequeña sobre la línea del pie). */
+    private static final float PIE_CON_AVISO = 62f;
     private static final DateTimeFormatter EMISION = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final CharsetEncoder WIN_ANSI = Charset.forName("windows-1252").newEncoder();
 
@@ -53,12 +55,23 @@ public final class PdfReporte implements AutoCloseable {
     private final PDImageXObject logo;
     private float y;
     private int paginas;
+    private float piePagina = PIE;
+    private String avisoPie;
 
     public PdfReporte(boolean horizontal, String tituloCorto) throws IOException {
         this.tamano = horizontal ? new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()) : PDRectangle.A4;
         this.tituloCorto = limpiar(tituloCorto);
         this.logo = cargarLogo();
         nuevaPagina();
+    }
+
+    /**
+     * Aviso que se imprime en el pie de TODAS las hojas (por ejemplo "Información sujeta a cambios..."). Debe llamarse antes de
+     * agregar contenido para que el texto de las hojas ya escritas no invada su espacio.
+     */
+    public void avisoPie(String aviso) {
+        this.avisoPie = aviso == null || aviso.isBlank() ? null : limpiar(aviso);
+        this.piePagina = this.avisoPie == null ? PIE : PIE_CON_AVISO;
     }
 
     // ------------------------------------------------------------------ bloques
@@ -156,7 +169,7 @@ public final class PdfReporte implements AutoCloseable {
 
         int i = 0;
         for (T fila : filas) {
-            if (y - altoFila < PIE + 8) {
+            if (y - altoFila < piePagina + 8) {
                 nuevaPagina();
                 encabezadoTabla(columnas, anchos);
             }
@@ -172,7 +185,7 @@ public final class PdfReporte implements AutoCloseable {
         }
 
         if (columnas.stream().anyMatch(Columna::sumar)) {
-            if (y - altoFila < PIE + 8) {
+            if (y - altoFila < piePagina + 8) {
                 nuevaPagina();
                 encabezadoTabla(columnas, anchos);
             }
@@ -210,6 +223,9 @@ public final class PdfReporte implements AutoCloseable {
                 pie.lineTo(tamano.getWidth() - MARGEN, 30);
                 pie.stroke();
                 escribir(pie, emitido, MARGEN, 18, normal, 8, GRIS);
+                if (avisoPie != null) {
+                    escribir(pie, ajustar(avisoPie, normal, 7.5f, ancho()), MARGEN, 38, normal, 7.5f, GRIS);
+                }
                 String paginaTxt = "Página " + (i + 1) + " de " + total;
                 escribir(pie, paginaTxt, tamano.getWidth() - MARGEN - ancho(paginaTxt, normal, 8), 18, normal, 8, GRIS);
             }
@@ -266,7 +282,7 @@ public final class PdfReporte implements AutoCloseable {
     }
 
     private void asegurar(float alto) throws IOException {
-        if (y - alto < PIE + 8) nuevaPagina();
+        if (y - alto < piePagina + 8) nuevaPagina();
     }
 
     /**

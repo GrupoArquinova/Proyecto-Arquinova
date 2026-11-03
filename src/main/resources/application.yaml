@@ -217,6 +217,10 @@ app:
   # Retención de datos personales (Ley 1581): meses que se conservan las solicitudes de contacto; 0 = no borrar nunca
   retencion:
     solicitudes-meses: ${APP_RETENCION_SOLICITUDES_MESES:24}
+    # Analítica sin cookies, preguntas guardadas del asistente e historial de cambios del panel (0 = no borrar nunca)
+    analitica-meses: ${APP_RETENCION_ANALITICA_MESES:24}
+    chat-meses: ${APP_RETENCION_CHAT_MESES:12}
+    auditoria-meses: ${APP_RETENCION_AUDITORIA_MESES:24}
     cron: ${APP_RETENCION_CRON:0 0 3 * * *}
 
 # Asistente de IA (Gemini). La clave NUNCA va en este archivo: se define en la variable de entorno GEMINI_API_KEY

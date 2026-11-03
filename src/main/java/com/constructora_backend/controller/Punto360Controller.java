@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.constructora_backend.security.Permisos;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,7 +35,7 @@ public class Punto360Controller {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Operation(summary = "Crear punto")
     @Auditable(accion = "CREAR_PUNTO_360", entidad = "PUNTOS_360", descripcion = "Creación de punto sobre imagen 360°")
     public ResponseEntity<Punto360ResponseDTO> crear(@Valid @RequestBody Punto360RequestDTO dto) {
@@ -42,7 +43,7 @@ public class Punto360Controller {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Operation(summary = "Actualizar punto")
     @Auditable(accion = "ACTUALIZAR_PUNTO_360", entidad = "PUNTOS_360", descripcion = "Actualización de punto sobre imagen 360°")
     public ResponseEntity<Punto360ResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody Punto360RequestDTO dto) {
@@ -50,7 +51,7 @@ public class Punto360Controller {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Operation(summary = "Eliminar punto")
     @Auditable(accion = "ELIMINAR_PUNTO_360", entidad = "PUNTOS_360", descripcion = "Eliminación de punto sobre imagen 360°")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {

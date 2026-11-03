@@ -57,6 +57,10 @@ public class SolicitudContactoService {
     @Autowired
     private CaptchaService captchaService;
 
+    /** Analítica propia sin cookies: el servidor registra FORMULARIO_ENVIADO al guardar la solicitud (el navegador no lo manda). */
+    @Autowired(required = false)
+    private AnaliticaService analiticaService;
+
     /** Versión de la política de tratamiento de datos vigente; queda guardada con el consentimiento (APP_LEGAL_VERSION_POLITICA). */
     @Value("${app.legal.version-politica:2026-10}")
     private String versionPolitica = "2026-10";
@@ -147,6 +151,16 @@ public class SolicitudContactoService {
         solicitud.setVersionPolitica(versionPolitica);
         solicitud.setFechaConsentimiento(LocalDateTime.now());
         SolicitudContacto guardada = solicitudRepository.save(solicitud);
+
+        // Cuenta el formulario enviado en la analítica (sin datos de la persona); un fallo aquí no afecta la solicitud
+        if (analiticaService != null) {
+            try {
+                analiticaService.registrarDelServidor(com.constructora_backend.enums.TipoEventoAnalitica.FORMULARIO_ENVIADO,
+                        proyecto != null ? proyecto.getId() : null);
+            } catch (Exception ex) {
+                log.warn("Analítica: no se pudo registrar el formulario enviado: {}", ex.getMessage());
+            }
+        }
 
         // 2. Disparar el envío de correo electrónico a la empresa de forma segura
         try {

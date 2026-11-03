@@ -233,7 +233,89 @@ Sin esto el backend no arranca (`Schema-validation: missing column`). Las filas 
 ### 7.5 Variables de entorno nuevas (todas opcionales, con valor por defecto)
 
 `JWT_SESION_MAXIMA_HORAS` (12), `APP_MAX_CUERPO_BYTES` (65536), `APP_LEGAL_VERSION_POLITICA` (2026-10), `APP_RETENCION_SOLICITUDES_MESES` (24), `APP_RETENCION_CRON` (`0 0 3 * * *`), `APP_CONTACTO_CONFIRMACIONES_MAX_HORA` (60), `APP_CONTACTO_CONFIRMACIONES_MAX_DIA` (300), `GEMINI_RESPUESTA_SEGUNDOS` (10), `GEMINI_CONCURRENCIA_MAXIMA` (5), `GEMINI_CUOTA_DIARIA` (1000; 0 = sin tope), `TURNSTILE_SECRET` (vacío = captcha desactivado), `TURNSTILE_FALLO_ABIERTO` (false).
+Nuevas (V14, ver 7.6 a 7.11): `APP_RETENCION_ANALITICA_MESES` (24), `APP_RETENCION_CHAT_MESES` (12), `APP_RETENCION_AUDITORIA_MESES` (24; `0` = no borrar). `APP_SITIO_URL` pasa a ser **necesaria para el sitemap** (sin ella `/api/publico/sitemap.xml` responde 404) y para el enlace del brochure.
 `APP_CONTACTO_CORREO_AVISO` **ya no tiene valor por defecto**: definirlo en Render (correo que recibe los avisos de nuevas solicitudes).
+
+### 7.6 Migración V14 (aplicar a mano en Aiven, ANTES de desplegar)
+
+Roles COMERCIAL y EDITOR, analítica sin cookies y preguntas guardadas del asistente. Flyway está apagado en Render, así que **el SQL se aplica a mano y antes que el despliegue**:
+
+1. **Aiven** (Workbench, pestaña *Aiven*): ejecutar completo `src/main/resources/db/migration/V14__roles_analitica_chat.sql`. Es idempotente (se puede repetir) y **no estorba al backend anterior**: solo agrega dos tablas y dos filas de `roles`.
+2. **Render**: *Manual Deploy → Deploy latest commit*. Si se despliega sin el paso 1 el backend no arranca (`Schema-validation: missing table [eventos_analitica]`).
+3. **Vercel** (frontend): después del backend. Agregar al `vercel.json` la reescritura `/sitemap.xml` → `https://arquinova-backend.onrender.com/api/publico/sitemap.xml` y definir en Render `APP_SITIO_URL` (ver 7.11).
+4. Comprobar: `SELECT id, nombre FROM roles;` debe mostrar ADMINISTRADOR (1), COMERCIAL (2) y EDITOR (3); el panel de usuarios lee los números reales de `GET /api/roles`, no los supone.
+
+En la base **local** Flyway sí está activo (`FLYWAY_ENABLED=true` en `.env`): V14 se aplica sola al arrancar el backend o las pruebas. En una base nueva, V14 va antes de cargar los catálogos iniciales: crea los roles 2 y 3 y deja libre el 1 para ADMINISTRADOR.
+
+### 7.7 Roles y permisos
+
+El rol de cada persona se elige al crear o editar un usuario (Admin → Usuarios; la lista sale de `GET /api/roles`). Se guarda en `roles.nombre` con o sin el prefijo `ROLE_`: el código siempre lo normaliza. Cambiar el rol cierra las sesiones abiertas de esa persona.
+
+| Rol | Puede | No puede |
+| --- | --- | --- |
+| **ADMINISTRADOR** | Todo: usuarios, historial de cambios, métricas, reportes y exportaciones, solicitudes (incluido borrarlas) y todo el contenido. | — |
+| **COMERCIAL** | Leer y atender solicitudes de contacto (cambiar estado y notas), administrar los estados de solicitud, ver las métricas (solo lectura) y leer proyectos, lotes, villas, amenidades y estados de lote (también lo no publicado) para tener contexto. | Editar proyectos, multimedia, contenido o usuarios; borrar solicitudes; ver el historial de cambios, reportes y exportaciones; ver el texto de las preguntas del asistente. |
+| **EDITOR** | Crear, editar y borrar proyectos, ubicaciones, villas (casas modelo), amenidades (zonas comunes y sus imágenes), etapas, lotes (incluido su estado), estados de lote, multimedia (y pedir la firma de subida a Cloudinary), puntos 360°, contenido institucional y datos de la empresa; ver lo no publicado de todo eso. | Ver solicitudes, usuarios, historial, métricas, reportes o exportaciones. |
+
+- **Dónde se aplica**: `SecurityConfig` (rutas) y `@PreAuthorize` en cada controlador (constantes de `security/Permisos`), las dos capas. La regla por defecto sigue siendo "escribir en `/api/**` es solo del ADMINISTRADOR"; el EDITOR y el COMERCIAL solo se abren por rutas concretas. Un endpoint nuevo sin decisión explícita queda cerrado para ambos.
+- **Perfil propio**: cualquier rol puede cambiar su nombre y su contraseña (con la actual); nunca su rol, estado ni correo.
+- **Siempre queda un administrador**: no se puede desactivar, eliminar ni cambiar de rol al último administrador activo, ni uno mismo desactivarse o eliminarse (error 409). Tampoco se puede asignar un rol desactivado.
+- **Pruebas**: `PermisosPorRolTest` (matriz rol × endpoint con la seguridad real), `RolesNuevosTest` y `EscrituraSoloAdminTest`.
+
+### 7.8 Historial de cambios
+
+`GET /api/admin/auditoria` (solo ADMINISTRADOR), paginado y filtrable por `usuarioId`, `entidad`, `accion`, `texto`, `desde` y `hasta` (fechas `YYYY-MM-DD`, ambas incluidas); `size` máximo 100; `GET /api/admin/auditoria/filtros` trae las entidades y acciones existentes para llenar los filtros.
+
+- Toda escritura de contenido, usuarios, solicitudes y lotes queda registrada (acción, entidad, ID, descripción, quién, IP, navegador y fecha). La descripción es una frase: `Editó proyecto 'El Encanto' (cambió: descripcion, publicado: no → sí)`, `Eliminó lote 'LT-101'`, `Editó usuario 'Ana' (cambió: activo: sí → no, rol: EDITOR → COMERCIAL)`, `Atendió la solicitud de contacto #12 (cambió: estado: NUEVO → CONTACTADO, observacionesInternas)`.
+- De los campos que cambiaron se guarda **el nombre**; el valor solo si es sí/no, un estado de lista o una relación (estado, rol...). **Nunca** contraseñas, hashes, tokens ni el texto de descripciones o mensajes. Las solicitudes se identifican por su número, no por el nombre de la persona.
+- Retención: `APP_RETENCION_AUDITORIA_MESES` (24; `0` = no borrar nunca). El historial lleva la IP y el navegador de quien administra.
+- Un test (`CoberturaDeAuditoriaTest`) falla si alguien agrega una escritura sin `@Auditable`.
+
+### 7.9 Analítica propia sin cookies
+
+Decisión del dueño: no se usan terceros (ni Google Analytics). Tabla `eventos_analitica` (`tipo`, `proyecto_id`, `ruta`, `creado_en`): **sin IP, sin navegador, sin identificador de visitante y sin cookies**.
+
+`POST /api/analitica/evento` (público, sin captcha, responde 204) con `{"tipo": "...", "proyectoId": 6, "ruta": "/proyectos/6/ubicacion"}`. Quién manda cada tipo, para no contar doble:
+
+| Tipo | Lo registra |
+| --- | --- |
+| `VISTA_PAGINA`, `VISTA_PROYECTO`, `CLICK_WHATSAPP`, `COMPARTIR` | El **navegador** (frontend) con este endpoint. |
+| `FORMULARIO_ENVIADO` | El **servidor**, al guardar una solicitud de contacto (no al descartar un robot). |
+| `INICIO_CHAT` | El **servidor**, con la primera pregunta de una conversación (sin historial). |
+| `DESCARGA_BROCHURE` | El **servidor**, al entregar el PDF. |
+
+Si el navegador manda uno de los tres últimos, se ignora en silencio. También se ignora, siempre con 204, un evento de un proyecto inexistente o no publicado, o de tipo de proyecto sin `proyectoId`. La ruta se guarda sin dominio, `?` ni `#` y recortada a 200 caracteres. Cupo propio por IP: 120 por minuto (la IP solo vive en memoria para ese cupo; no se guarda). Tope de cuerpo de 64 KB como el resto. Retención: `APP_RETENCION_ANALITICA_MESES` (24).
+
+### 7.10 Preguntas guardadas del asistente
+
+Decisión del dueño: se guarda **solo la pregunta**. Tabla `chat_preguntas` (`pregunta` ≤ 500, `idioma`, `tema`, `creado_en`): sin respuesta, sin historial, sin IP y sin identificadores. Si la pregunta parece contener un **correo o un teléfono** (7 dígitos o más), se reemplaza por `[dato omitido]` antes de guardar. El `tema` lo asigna `ChatTemaClasificador` por palabras clave, sin IA: `UBICACION`, `PRECIOS`, `LOTES`, `VILLAS`, `AMENIDADES`, `CONTACTO_VISITA`, `SERVICIOS`, `PROYECTOS`, `TOUR_PLANOS`, `OTRO` (si aplican varios gana el de mayor prioridad: contacto, precios, tour, ubicación, amenidades, villas, lotes, servicios, proyectos).
+
+Si guardar falla, el chat responde igual (solo queda un aviso en el log). Retención: `APP_RETENCION_CHAT_MESES` (12). El administrador ve los temas y las últimas 30 preguntas en las métricas; el comercial solo los temas.
+
+### 7.11 Métricas, brochure PDF y sitemap
+
+- **Métricas**: `GET /api/admin/metricas?desde=YYYY-MM-DD&hasta=YYYY-MM-DD` (por defecto, últimos 90 días; máximo 731). Administrador y comercial; `chat.recientes` solo se llena para el administrador. Las semanas y los días sin datos vienen con 0. Todo se agrega en la base de datos.
+- **Brochure**: `GET /api/proyectos/{id}/brochure.pdf` (público; 404 si el proyecto no está publicado y activo; 10 descargas por minuto por IP). Se genera al momento con los datos publicados: empresa, proyecto, descripción, ubicación, etapa, tipo, villas (m², habitaciones, baños), amenidades, resumen de lotes disponibles **sin precios**, contacto y enlace del proyecto, con el aviso "Información sujeta a cambios; los valores y la disponibilidad los confirma el equipo comercial". Un proyecto de **portafolio** se presenta como caso realizado, no como oferta, y no lista lotes. No carga nada de internet (solo el logo que viene en la aplicación). El servidor registra `DESCARGA_BROCHURE`: el frontend **no** debe mandarlo.
+- **Sitemap**: `GET /api/publico/sitemap.xml` (público, `application/xml`, caché de 1 hora) con el inicio, `/proyectos` y cada `/proyectos/{id}` publicado y activo, con `<lastmod>` cuando hay fecha de actualización. Usa `APP_SITIO_URL` como base; **sin esa variable responde 404** (un sitemap con direcciones inventadas sería inválido). En Vercel se expone como `/sitemap.xml` con una reescritura (`vercel.json`, `rewrites`) hacia el backend, y conviene agregar `Sitemap: https://<dominio>/sitemap.xml` al `robots.txt`.
+- **SEO de un proyecto**: `GET /api/proyectos/{id}` ya devuelve `nombre`, `descripcion` (y `descripcionEn`), `imagenUrl` (portada), `empresaNombre`, `slug` y `actualizadoEn`; la ciudad y el departamento salen de `GET /api/ubicaciones/proyecto/{id}` (también público).
+
+### 7.12 Nota para la política de privacidad (texto exacto de lo que se guarda)
+
+Para que el sitio lo cite tal cual (versión en español y en inglés). Si cambia lo que se guarda, actualizar este texto y `APP_LEGAL_VERSION_POLITICA`.
+
+> **Estadísticas de uso (sin cookies).** Para saber qué partes del sitio interesan, guardamos cuántas veces se ve una página o un proyecto, cuántas personas abren WhatsApp, comparten un proyecto, descargan un brochure, envían el formulario o inician el chat. De cada una de esas acciones solo guardamos el tipo de acción, el proyecto (si aplica), la ruta de la página sin parámetros y la fecha y hora. **No guardamos tu dirección IP, tu navegador, ningún identificador tuyo ni usamos cookies para esto**, y no compartimos estos datos con terceros. Los conservamos 24 meses.
+>
+> **Preguntas al asistente.** Si usas el asistente virtual, guardamos el texto de tu pregunta, el idioma y el tema (por ejemplo, ubicación o precios) para mejorar el sitio y las respuestas. **No guardamos la respuesta, la conversación, tu dirección IP ni ningún identificador.** Si en tu pregunta escribes un correo o un teléfono, lo reemplazamos por "[dato omitido]" antes de guardarla; aun así, te pedimos no escribir datos personales en el chat. Las preguntas se conservan 12 meses y solo las consulta el equipo administrador.
+>
+> **Tu dirección IP** se usa únicamente, y solo en memoria, para limitar el número de solicitudes por minuto y proteger el sitio de abusos; no se almacena con estas estadísticas.
+
+> **Usage statistics (no cookies).** To learn which parts of the site are of interest, we record how many times a page or a project is viewed, and how many people open WhatsApp, share a project, download a brochure, submit the contact form or start the chat. For each of these actions we only store the type of action, the project (if any), the page path without parameters, and the date and time. **We do not store your IP address, your browser, any identifier of yours, and we do not use cookies for this**, and we do not share this data with third parties. We keep it for 24 months.
+>
+> **Questions to the assistant.** If you use the virtual assistant, we store the text of your question, the language and the topic (for example, location or prices) to improve the site and its answers. **We do not store the answer, the conversation, your IP address or any identifier.** If your question contains an email address or a phone number, we replace it with "[dato omitido]" before saving it; even so, please do not type personal data into the chat. Questions are kept for 12 months and are only reviewed by the administration team.
+>
+> **Your IP address** is used only, and only in memory, to limit the number of requests per minute and protect the site from abuse; it is not stored with these statistics.
+
+El marcador de dato omitido es `[dato omitido]` en ambos idiomas (así queda en la base).
 
 ## 8. Antes de publicar el sitio de verdad
 
@@ -260,7 +342,12 @@ El chat usa la API de Gemini desde `AIService`. Variables de entorno (nunca en `
 | `GEMINI_MODEL` | Opcional. Por defecto `gemini-3.1-flash-lite`. Google retira modelos con el tiempo: si el chat deja de responder, mira el log del backend (`Gemini respondió 404`) y cambia el modelo. La lista vigente se consulta con `GET https://generativelanguage.googleapis.com/v1beta/models` y la cabecera `x-goog-api-key`. |
 | `GEMINI_MODEL_RESPALDO` | Opcional. Por defecto `gemini-3.6-flash`. Se usa cuando el principal falla (retirado o con alta demanda). |
 
-- El bot responde solo con datos reales y públicos (proyectos publicados, villas, amenidades, ubicación y lotes por estado, guardados 10 minutos) y tiene prohibido dar precios, plazos o asesoría legal: para eso remite al WhatsApp.
+- El bot responde solo con datos reales y públicos, guardados 10 minutos (tope de 12.000 caracteres; si no caben todos los proyectos, los últimos se omiten y se avisa). Tiene prohibido dar precios, plazos o asesoría legal: para eso remite al equipo (WhatsApp o formulario de contacto del sitio). Recibe:
+  - **Empresa** (la primera activa de la tabla `empresas`): nombre, descripción, servicios, oficina de atención (`direccion`), correo comercial, teléfono, WhatsApp y sitio web. Si falta algún dato, el bot dice que lo confirma el equipo; para que lo sepa hay que llenarlo en el panel.
+  - **Por proyecto publicado**: tipo de registro (oferta comercial = unidades a la venta; portafolio = Arquinova solo participó con estudios, diseño o gestión, y nunca se presenta como en venta) y su participación, tipo de proyecto, enlace (`APP_SITIO_URL` + `/proyectos/{id}`; sin esa variable no hay enlaces), etapa del proyecto, fases activas por orden, descripción, ubicación, villas (medidas y si tienen tour virtual o planos, sin las direcciones de los archivos), amenidades con su descripción corta y lotes (conteo por estado, rango de áreas y detalle de los lotes disponibles: código, nombre y área, hasta 15 por proyecto).
+  - **No recibe** la `trayectoria` de la empresa (puede traer afirmaciones sin soporte confirmado, como años de experiencia) ni misión, visión o valores: esos contenidos institucionales siguen pendientes de aprobación de la empresa. Cuando se aprueben, se agregan en `ChatContextoService.agregarEmpresa`.
+- **Memoria de conversación**: el frontend puede enviar `historial` (opcional) con hasta 6 mensajes previos `{rol: "user"|"model", texto}` (cada texto no vacío y de hasta 600 caracteres) para que el bot entienda preguntas de seguimiento ("¿y tiene piscina?"). Como viene del navegador, se trata como texto no confiable (nunca como instrucciones); el backend descarta los turnos que rompen la alternancia user/model. Sin `historial` funciona como una pregunta suelta.
+- **Preguntas guardadas**: de cada pregunta se guarda solo el texto (con correos y teléfonos omitidos), el idioma y el tema, durante 12 meses; nunca la respuesta ni el historial. Detalle en 7.10; texto para la política de privacidad en 7.12.
 - `/api/chat` es público: 10 preguntas por minuto por IP (y 120 por minuto entre todas las IP), 500 caracteres por pregunta, como máximo 5 consultas a la vez a la IA (si no hay cupo responde 429 de inmediato) y una cuota diaria global (`GEMINI_CUOTA_DIARIA`; al agotarse responde 503). Conviene fijar también una cuota o un presupuesto en la consola de Google para la clave. Los datos de los proyectos van a la IA entre etiquetas `<datos>` y se le indica que son solo información, no instrucciones.
 - Si la clave se expone (por ejemplo, se sube a un repositorio), hay que revocarla en Google AI Studio y crear otra.
 - Ante un fallo pasajero de Google (429 o 5xx) el backend reintenta una vez por modelo (2 reintentos en total, con espera de 0,5 s y tiempo máximo de respuesta de 10 s) y, si sigue fallando, prueba el modelo de respaldo; solo después el visitante ve el aviso de "no puedo responder". Si en el log aparecen muchos `Gemini respondió 429`, la cuota de la clave es insuficiente (los planes gratuitos tienen pocas peticiones por minuto): conviene activar la facturación en Google AI Studio.

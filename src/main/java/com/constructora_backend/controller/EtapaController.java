@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.constructora_backend.security.Permisos;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.constructora_backend.aspect.Auditable;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,14 +25,14 @@ public class EtapaController {
     private EtapaService etapaService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.LECTURA_INTERNA)
     @Operation(summary = "Listar todas las etapas", description = "Obtiene una lista de todas las etapas")
     public ResponseEntity<List<EtapaResponseDTO>> listarTodas() {
         return ResponseEntity.ok(etapaService.listarTodas());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.LECTURA_INTERNA)
     @Operation(summary = "Obtener etapa por ID", description = "Obtiene los detalles de una etapa específica")
     public ResponseEntity<EtapaResponseDTO> obtenerPorId(@PathVariable Long id) {
         return etapaService.obtenerPorId(id)
@@ -40,7 +41,7 @@ public class EtapaController {
     }
 
     @GetMapping("/proyecto/{proyectoId}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.LECTURA_INTERNA)
     @Operation(summary = "Listar etapas por proyecto", description = "Obtiene las etapas asociadas a un proyecto")
     public ResponseEntity<List<EtapaResponseDTO>> listarPorProyecto(
             @PathVariable Long proyectoId,
@@ -53,7 +54,7 @@ public class EtapaController {
 
     @PostMapping
     @Operation(summary = "Crear etapa", description = "Crea una nueva etapa en un proyecto")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "CREAR_ETAPA", entidad = "ETAPAS", descripcion = "Creación de nueva etapa")
     public ResponseEntity<EtapaResponseDTO> crear(@Valid @RequestBody EtapaRequestDTO dto){
         return ResponseEntity.status(HttpStatus.CREATED).body(etapaService.guardar(dto));
@@ -61,7 +62,7 @@ public class EtapaController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar etapa", description = "Actualiza los datos de una etapa existente")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ACTUALIZAR_ETAPA", entidad = "ETAPAS", descripcion = "Actualización de etapa")
     public ResponseEntity<EtapaResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody EtapaRequestDTO dto) {
         return ResponseEntity.ok(etapaService.actualizar(id, dto));
@@ -69,7 +70,7 @@ public class EtapaController {
 
     @PatchMapping("/{id}/desactivar")
     @Operation(summary = "Desactivar etapa", description = "Realiza un borrado lógico de una etapa")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "DESACTIVAR_ETAPA", entidad = "ETAPAS", descripcion = "Desactivación de etapa")
     public ResponseEntity<Void> desactivar(@PathVariable Long id) {
         etapaService.desactivar(id);
@@ -78,7 +79,7 @@ public class EtapaController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar etapa", description = "Elimina físicamente una etapa del sistema")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ELIMINAR_ETAPA", entidad = "ETAPAS", descripcion = "Eliminación permanente de etapa")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         etapaService.eliminar(id);

@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import com.constructora_backend.security.Permisos;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.constructora_backend.aspect.Auditable;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,7 +28,7 @@ public class ZonaComunController {
 
     @GetMapping("/proyecto/{proyectoId}")
     @Operation(summary = "Listar por proyecto", description = "Obtiene todas las zonas comunes de un proyecto (incluyendo no publicadas/inactivas)")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.LECTURA_INTERNA)
     public ResponseEntity<List<ZonaComunResponseDTO>> listarPorProyectos(@PathVariable Long proyectoId) {
         return ResponseEntity.ok(zonaComunService.listarPorProyecto(proyectoId));
     }
@@ -42,14 +43,14 @@ public class ZonaComunController {
     @Operation(summary = "Obtener zona común por ID", description = "Retorna los detalles de una zona común específica")
     public ResponseEntity<ZonaComunResponseDTO> obtenerPorId(@PathVariable Long id, Authentication authentication) {
         // Sin sesión de administrador solo se devuelve lo publicado y activo (de un proyecto publicado y activo); si no, 404
-        return (UserSecurityHelper.esAdmin(authentication) ? zonaComunService.obtenerPorId(id) : zonaComunService.obtenerPublicaPorId(id))
+        return (Permisos.puedeLeerTodo(authentication) ? zonaComunService.obtenerPorId(id) : zonaComunService.obtenerPublicaPorId(id))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
     @Operation(summary = "Crear zona común", description = "Crea una nueva zona común para un proyecto")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "CREAR_ZONA_COMUN", entidad = "ZONAS_COMUNES", descripcion = "Creación de zona común")
     public ResponseEntity<ZonaComunResponseDTO> crear(@Valid @RequestBody ZonaComunRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(zonaComunService.guardar(dto));
@@ -57,7 +58,7 @@ public class ZonaComunController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar zona común", description = "Actualiza los datos de una zona común")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ACTUALIZAR_ZONA_COMUN", entidad = "ZONAS_COMUNES", descripcion = "Actualización de zona común")
     public ResponseEntity<ZonaComunResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody ZonaComunRequestDTO dto) {
         return ResponseEntity.ok(zonaComunService.actualizar(id, dto));
@@ -65,7 +66,7 @@ public class ZonaComunController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar zona común", description = "Elimina de forma permanente una zona común")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ELIMINAR_ZONA_COMUN", entidad = "ZONAS_COMUNES", descripcion = "Eliminación de zona común")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         zonaComunService.eliminar(id);

@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.constructora_backend.security.Permisos;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -26,14 +27,14 @@ public class MultimediaController {
 
     @PostMapping
     @Operation(summary = "Crear recurso multimedia", description = "Registra un nuevo archivo multimedia asociado a un proyecto, lote, zona común o casa modelo")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "CREAR_MULTIMEDIA", entidad = "MULTIMEDIA", descripcion = "Registro de nuevo recurso multimedia")
     public ResponseEntity<MultimediaResponseDTO> crear(@Valid @RequestBody MultimediaRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(multimediaService.guardar(dto));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Operation(summary = "Obtener multimedia por ID", description = "Retorna los detalles y metadatos de un recurso multimedia específico")
     public ResponseEntity<MultimediaResponseDTO> obtenerPorId(@PathVariable Long id) {
         return ResponseEntity.ok(multimediaService.obtenerPorId(id));
@@ -46,14 +47,13 @@ public class MultimediaController {
             @PathVariable Long entidadId,
             @RequestParam(defaultValue = "false") boolean soloPublicados,
             Authentication authentication) {
-        boolean esAdmin = authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_ADMINISTRADOR".equals(a.getAuthority()));
+        boolean esAdmin = Permisos.puedeEditarContenido(authentication);
 
         return ResponseEntity.ok(multimediaService.listarPorEntidad(tipoEntidad, entidadId, soloPublicados || !esAdmin));
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Operation(summary = "Listar toda la multimedia", description = "Retorna una lista con todos los recursos multimedia registrados en el sistema")
     public ResponseEntity<List<MultimediaResponseDTO>> listarTodos() {
         return ResponseEntity.ok(multimediaService.listarTodos());
@@ -61,7 +61,7 @@ public class MultimediaController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar multimedia", description = "Actualiza la información y metadatos de un recurso multimedia existente")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ACTUALIZAR_MULTIMEDIA", entidad = "MULTIMEDIA", descripcion = "Actualización de recurso multimedia")
     public ResponseEntity<MultimediaResponseDTO> actualizar(
             @PathVariable Long id,
@@ -71,7 +71,7 @@ public class MultimediaController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar multimedia", description = "Elimina un recurso multimedia del sistema")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ELIMINAR_MULTIMEDIA", entidad = "MULTIMEDIA", descripcion = "Eliminación de recurso multimedia")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         multimediaService.eliminar(id);

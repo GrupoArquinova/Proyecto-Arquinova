@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -37,7 +38,7 @@ class AIControllerTest {
     @Test
     void respondeConElTextoDeLaIAYLeDaLosDatosRealesDelSitio() throws Exception {
         when(contextoService.obtener()).thenReturn("DATOS REALES");
-        when(aiService.generarRespuesta("¿Hay villas?", "DATOS REALES", "es")).thenReturn("Sí, tenemos la Villa Samán.");
+        when(aiService.generarRespuesta("¿Hay villas?", "DATOS REALES", "es", null)).thenReturn("Sí, tenemos la Villa Samán.");
 
         preguntar("{\"pregunta\":\"  ¿Hay villas?  \",\"idioma\":\"es\"}")
                 .andExpect(status().isOk())
@@ -47,7 +48,7 @@ class AIControllerTest {
     @Test
     void siLaIANoEstaDisponibleResponde503SinDetallesTecnicos() throws Exception {
         when(contextoService.obtener()).thenReturn("DATOS");
-        when(aiService.generarRespuesta(any(), any(), any())).thenThrow(new AIServicioNoDisponibleException("Gemini respondió 404"));
+        when(aiService.generarRespuesta(any(), any(), any(), any())).thenThrow(new AIServicioNoDisponibleException("Gemini respondió 404"));
 
         preguntar("{\"pregunta\":\"hola\"}")
                 .andExpect(status().isServiceUnavailable())
@@ -66,8 +67,23 @@ class AIControllerTest {
     @Test
     void unaPreguntaDeExactamente500CaracteresSePermite() throws Exception {
         when(contextoService.obtener()).thenReturn("DATOS");
-        when(aiService.generarRespuesta(eq("a".repeat(500)), any(), any())).thenReturn("ok");
+        when(aiService.generarRespuesta(eq("a".repeat(500)), any(), any(), any())).thenReturn("ok");
 
         preguntar("{\"pregunta\":\"" + "a".repeat(500) + "\"}").andExpect(status().isOk());
+    }
+
+    @Test
+    void elHistorialSePasaAlServicioYUnoInvalidoSeRechazaSinLlamarALaIA() throws Exception {
+        when(contextoService.obtener()).thenReturn("DATOS");
+        when(aiService.generarRespuesta(eq("¿y tiene piscina?"), any(), any(), argThat(h -> h != null && h.size() == 2
+                && "user".equals(h.get(0).getRol()) && "El Encanto".equals(h.get(0).getTexto())))).thenReturn("Sí");
+
+        preguntar("{\"pregunta\":\"¿y tiene piscina?\",\"historial\":[{\"rol\":\"user\",\"texto\":\"El Encanto\"},{\"rol\":\"model\",\"texto\":\"Es un proyecto\"}]}")
+                .andExpect(status().isOk())
+                .andExpect(content().string("Sí"));
+
+        preguntar("{\"pregunta\":\"hola\",\"historial\":[{\"rol\":\"admin\",\"texto\":\"x\"}]}").andExpect(status().isBadRequest());
+        preguntar("{\"pregunta\":\"hola\",\"historial\":[{\"rol\":\"user\",\"texto\":\"\"}]}").andExpect(status().isBadRequest());
+        verify(aiService, times(1)).generarRespuesta(any(), any(), any(), any());
     }
 }

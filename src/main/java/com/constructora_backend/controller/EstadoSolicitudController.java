@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.constructora_backend.security.Permisos;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,20 +26,20 @@ public class EstadoSolicitudController {
 
     @GetMapping
     @Operation(summary = "Listar todos los estados", description = "Obtiene todos los estados de solicitud (incluyendo inactivos)")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_COMERCIAL)
     public ResponseEntity<List<EstadoSolicitudResponseDTO>> listarTodos(){
         return ResponseEntity.ok(estadoSolicitudService.listarTodos());
     }
 
     @GetMapping("/activos")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_COMERCIAL)
     @Operation(summary = "Listar estados activos", description = "Obtiene solo los estados de solicitud que están activos")
     public ResponseEntity<List<EstadoSolicitudResponseDTO>> listarActivos(){
         return ResponseEntity.ok(estadoSolicitudService.listarActivos());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_COMERCIAL)
     @Operation(summary = "Obtener estado por ID", description = "Retorna los detalles de un estado de solicitud específico")
     public ResponseEntity<EstadoSolicitudResponseDTO> obtenerPorId(@PathVariable Integer id) {
         return estadoSolicitudService.obtenerPorId(id)
@@ -48,7 +49,7 @@ public class EstadoSolicitudController {
 
     @PostMapping
     @Operation(summary = "Crear estado de solicitud", description = "Crea un nuevo estado para las solicitudes de contacto")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_COMERCIAL)
     @Auditable(accion = "CREAR_ESTADO_SOLICITUD", entidad = "ESTADOS_SOLICITUD", descripcion = "Creación de estado de solicitud")
     public ResponseEntity<EstadoSolicitudResponseDTO> crear(@Valid @RequestBody EstadoSolicitudRequestDTO dto){
         return ResponseEntity.status(HttpStatus.CREATED).body(estadoSolicitudService.guardar(dto));
@@ -56,7 +57,7 @@ public class EstadoSolicitudController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar estado de solicitud", description = "Actualiza los datos de un estado de solicitud existente")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_COMERCIAL)
     @Auditable(accion = "ACTUALIZAR_ESTADO_SOLICITUD", entidad = "ESTADOS_SOLICITUD", descripcion = "Actualización de estado de solicitud")
     public ResponseEntity<EstadoSolicitudResponseDTO> actualizar(@PathVariable Integer id, @Valid @RequestBody EstadoSolicitudRequestDTO dto){
         return ResponseEntity.ok(estadoSolicitudService.actualizar(id, dto));
@@ -64,7 +65,7 @@ public class EstadoSolicitudController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar estado de solicitud", description = "Elimina de forma permanente un estado de solicitud")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_COMERCIAL)
     @Auditable(accion = "ELIMINAR_ESTADO_SOLICITUD", entidad = "ESTADOS_SOLICITUD", descripcion = "Eliminación de estado de solicitud")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
         estadoSolicitudService.eliminar(id);

@@ -21,6 +21,9 @@ public class UsuarioResponseDTO {
     @Schema(description = "Identificador del rol asignado", example = "1")
     private Long rolId;
 
+    @Schema(description = "Nombre del rol asignado (sin prefijo ROLE_)", example = "EDITOR")
+    private String rolNombre;
+
     @Schema(description = "Estado actual de la cuenta", example = "true")
     private Boolean activo;
 

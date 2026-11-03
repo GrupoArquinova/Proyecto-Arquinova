@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import com.constructora_backend.security.Permisos;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -37,8 +38,8 @@ public class ProyectoController {
     }
 
     private boolean esAdmin(Authentication authentication) {
-        return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_ADMINISTRADOR".equals(a.getAuthority()));
+        // Administradores, editores y comerciales ven también lo no publicado (el sitio público solo lo publicado y activo)
+        return Permisos.puedeLeerTodo(authentication);
     }
 
     private boolean esPublico(ProyectoResponseDTO proyecto) {
@@ -58,7 +59,7 @@ public class ProyectoController {
             @Parameter(description = "Si es true, sólo retorna proyectos publicados y activos", example = "false")
             @RequestParam(defaultValue = "false") boolean soloPublicados,
             Authentication authentication) {
-        // Sin sesión de ADMINISTRADOR solo se exponen proyectos publicados y activos
+        // Sin sesión interna (administrador, editor o comercial) solo se exponen proyectos publicados y activos
         List<ProyectoResponseDTO> lista = (soloPublicados || !esAdmin(authentication))
                 ? proyectoService.listarPublicados()
                 : proyectoService.listarTodos();
@@ -127,7 +128,7 @@ public class ProyectoController {
     // ───── CREAR ─────
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "CREAR_PROYECTO", entidad = "PROYECTOS", descripcion = "Registro de nuevo proyecto inmobiliario")
     @Operation(summary = "Crear un nuevo proyecto",
                description = "Registra un nuevo proyecto inmobiliario en el sistema. El slug debe ser único por empresa.")
@@ -146,7 +147,7 @@ public class ProyectoController {
     // ───── ACTUALIZAR ─────
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ACTUALIZAR_PROYECTO", entidad = "PROYECTOS", descripcion = "Actualización de proyecto inmobiliario")
     @Operation(summary = "Actualizar proyecto existente",
                description = "Modifica los datos de un proyecto existente según su ID.")
@@ -167,7 +168,7 @@ public class ProyectoController {
     // ───── DESACTIVAR ─────
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "DESACTIVAR_PROYECTO", entidad = "PROYECTOS", descripcion = "Desactivación lógica de proyecto")
     @Operation(summary = "Desactivar un proyecto",
                description = "Realiza la desactivación lógica (baja) de un proyecto inmobiliario sin eliminar su historial.")

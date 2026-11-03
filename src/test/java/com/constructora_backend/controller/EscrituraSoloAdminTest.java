@@ -1,5 +1,6 @@
 package com.constructora_backend.controller;
 
+import com.constructora_backend.security.Permisos;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,11 +29,13 @@ class EscrituraSoloAdminTest {
             EmpresaController.class, EstadoLoteController.class, EstadoSolicitudController.class, EtapaController.class,
             LoteController.class, MultimediaController.class, PasswordResetController.class, ProyectoController.class,
             Punto360Controller.class, ReporteController.class, SolicitudContactoController.class,
-            UbicacionController.class, UsuarioController.class, ZonaComunController.class, ZonaComunImagenController.class);
+            UbicacionController.class, UsuarioController.class, ZonaComunController.class, ZonaComunImagenController.class,
+            AnaliticaController.class, BrochureController.class, HistorialCambiosController.class, MetricasController.class,
+            RolController.class, SitemapController.class);
 
     /** Escrituras que NO exigen administrador por diseño. */
     private static final Set<String> PUBLICOS = Set.of(
-            "AIController.chatearConIA",
+            "AIController.chatearConIA", "AnaliticaController.registrar",
             "AuthController.login", "AuthController.logout", "AuthController.renovar",
             "PasswordResetController.forgotPassword", "PasswordResetController.resetPassword",
             "SolicitudContactoController.crearPublica",
@@ -44,7 +47,7 @@ class EscrituraSoloAdminTest {
     }
 
     @Test
-    @DisplayName("Todo método de escritura de un controlador lleva @PreAuthorize de administrador (salvo los públicos listados)")
+    @DisplayName("Todo método de escritura de un controlador lleva @PreAuthorize que incluye al administrador (salvo los públicos listados)")
     void todaEscrituraEstaProtegida() {
         List<String> sinProteger = new ArrayList<>();
         for (Class<?> controlador : CONTROLADORES) {
@@ -53,7 +56,8 @@ class EscrituraSoloAdminTest {
                 String nombre = controlador.getSimpleName() + "." + m.getName();
                 if (PUBLICOS.contains(nombre)) continue;
                 PreAuthorize pre = m.getAnnotation(PreAuthorize.class);
-                if (pre == null || !pre.value().contains("hasRole('ADMINISTRADOR')")) {
+                // Siempre incluye al administrador; EDITOR y COMERCIAL se suman solo donde les corresponde (ver Permisos)
+                if (pre == null || !pre.value().contains("'ADMINISTRADOR'")) {
                     sinProteger.add(nombre);
                 }
             }
@@ -62,7 +66,7 @@ class EscrituraSoloAdminTest {
     }
 
     @Test
-    @DisplayName("Proyectos y empresas: crear, actualizar y desactivar exigen administrador")
+    @DisplayName("Proyectos y empresas: crear, actualizar y desactivar exigen administrador o editor, nunca comercial")
     void proyectosYEmpresasProtegidos() throws NoSuchMethodException {
         for (Class<?> controlador : List.of(ProyectoController.class, EmpresaController.class)) {
             int escrituras = 0;
@@ -70,8 +74,8 @@ class EscrituraSoloAdminTest {
                 if (!escribe(m)) continue;
                 escrituras++;
                 PreAuthorize pre = m.getAnnotation(PreAuthorize.class);
-                assertTrue(pre != null && pre.value().equals("hasRole('ADMINISTRADOR')"),
-                        controlador.getSimpleName() + "." + m.getName() + " debe exigir ADMINISTRADOR");
+                assertTrue(pre != null && pre.value().equals(Permisos.ADMIN_O_EDITOR),
+                        controlador.getSimpleName() + "." + m.getName() + " debe exigir ADMINISTRADOR o EDITOR");
             }
             assertTrue(escrituras == 3, controlador.getSimpleName() + " tiene POST, PUT y DELETE");
         }

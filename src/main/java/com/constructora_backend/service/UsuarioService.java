@@ -60,6 +60,7 @@ public class UsuarioService {
 
         Rol rol = rolRepository.findById(dto.getRolId())
                 .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado con ID: " + dto.getRolId()));
+        exigirRolActivo(rol);
 
         Usuario usuario = usuarioMapper.toEntity(dto, rol);
         usuario.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
@@ -121,6 +122,7 @@ public class UsuarioService {
             if (dto.getRolId() != null) {
                 rol = rolRepository.findById(dto.getRolId())
                         .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado con ID: " + dto.getRolId()));
+                exigirRolActivo(rol);
             }
 
             boolean eraAdminActivo = esAdminActivo(usuario);
@@ -169,6 +171,13 @@ public class UsuarioService {
             throw new ConflictException("Debe quedar al menos un administrador activo");
         }
         usuarioRepository.deleteById(id);
+    }
+
+    /** Un rol desactivado no se puede asignar a nadie. */
+    private static void exigirRolActivo(Rol rol) {
+        if (!Boolean.TRUE.equals(rol.getActivo())) {
+            throw new BadRequestException("El rol seleccionado no está activo");
+        }
     }
 
     private static boolean esAdminActivo(Usuario usuario) {

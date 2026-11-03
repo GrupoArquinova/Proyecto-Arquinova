@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.constructora_backend.security.Permisos;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import com.constructora_backend.aspect.Auditable;
@@ -28,7 +29,7 @@ public class LoteController {
 
     @GetMapping
     @Operation(summary = "Listar todos los lotes (admin)", description = "Obtiene todos los lotes registrados, incluidos inactivos y no publicados. Requiere rol ADMINISTRADOR.")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.LECTURA_INTERNA)
     public ResponseEntity<List<LoteResponseDTO>> obtenerLotes() {
         return ResponseEntity.ok(loteService.listarTodos());
     }
@@ -41,7 +42,7 @@ public class LoteController {
 
     @GetMapping("/etapa/{etapaId}")
     @Operation(summary = "Listar lotes por etapa", description = "Obtiene todos los lotes asociados a una etapa (incluidos inactivos y no publicados)")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.LECTURA_INTERNA)
     public ResponseEntity<List<LoteResponseDTO>> listarPorEtapa(@PathVariable Long etapaId) {
         return ResponseEntity.ok(loteService.listarPorEtapa(etapaId));
     }
@@ -55,8 +56,7 @@ public class LoteController {
     @GetMapping("/{id}")
     @Operation(summary = "Obtener lote por ID", description = "Retorna los detalles de un lote. Un ADMINISTRADOR ve cualquier lote; el público solo ve lotes publicados y activos (los demás responden 404).")
     public ResponseEntity<LoteResponseDTO> obtenerPorId(@PathVariable Long id, Authentication authentication) {
-        boolean esAdmin = authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_ADMINISTRADOR".equals(a.getAuthority()));
+        boolean esAdmin = Permisos.puedeLeerTodo(authentication);
         java.util.Optional<LoteResponseDTO> lote = esAdmin
                 ? loteService.obtenerPorId(id)
                 : loteService.obtenerPublicoPorId(id);
@@ -66,7 +66,7 @@ public class LoteController {
 
     @PostMapping
     @Operation(summary = "Crear lote", description = "Crea un nuevo lote asociado a una etapa")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "CREAR_LOTE", entidad = "LOTES", descripcion = "Creación de un nuevo lote")
     public ResponseEntity<LoteResponseDTO> crear(@Valid @RequestBody LoteRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(loteService.guardar(dto));
@@ -74,7 +74,7 @@ public class LoteController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar lote", description = "Actualiza los datos de un lote existente")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ACTUALIZAR_LOTE", entidad = "LOTES", descripcion = "Actualización de datos de lote")
     public ResponseEntity<LoteResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody LoteRequestDTO dto) {
         return ResponseEntity.ok(loteService.actualizar(id, dto));
@@ -82,7 +82,7 @@ public class LoteController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar lote", description = "Elimina permanentemente un lote del sistema")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ELIMINAR_LOTE", entidad = "LOTES", descripcion = "Eliminación permanente de lote")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         loteService.eliminar(id);
@@ -92,7 +92,7 @@ public class LoteController {
     @PatchMapping("/{id}/estado")
     @Operation(summary = "Cambiar estado de lote",
             description = "Cambia el estado comercial del lote y lo registra en el historial. Cuerpo: {\"estadoId\": 2, \"observaciones\": \"opcional\"} (también acepta \"nuevoEstadoId\").")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "CAMBIAR_ESTADO_LOTE", entidad = "LOTES", descripcion = "Cambio de estado de lote e inserción en historial")
     public ResponseEntity<LoteResponseDTO> cambiarEstado(@PathVariable Long id, @Valid @RequestBody CambiarEstadoLoteDTO dto) {
         return ResponseEntity.ok(loteService.cambiarEstado(id, dto.getNuevoEstadoId().intValue(), dto.getObservaciones()));
@@ -100,14 +100,15 @@ public class LoteController {
 
     @GetMapping("/{id}/historial")
     @Operation(summary = "Consultar historial de estados", description = "Lista cronológica (más reciente primero) de los cambios de estado de un lote")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.LECTURA_INTERNA)
     public ResponseEntity<List<HistorialEstadoLoteDTO>> obtenerHistorial(@PathVariable Long id) {
         return ResponseEntity.ok(loteService.consultarHistorial(id));
     }
 
     @PatchMapping("/{id}/activo")
     @Operation(summary = "Activar o desactivar lote")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
+    @Auditable(accion = "ACTIVAR_DESACTIVAR_LOTE", entidad = "LOTES", descripcion = "Activación o desactivación de lote")
     public ResponseEntity<Void> toggleActivo(@PathVariable Long id, @RequestBody java.util.Map<String, Boolean> body) {
         Boolean activo = body.get("activo");
         loteService.toggleActivo(id, activo);

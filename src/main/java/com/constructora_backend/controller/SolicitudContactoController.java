@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.constructora_backend.security.Permisos;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,28 +28,28 @@ public class SolicitudContactoController {
 
     @GetMapping
     @Operation(summary = "Listar todas las solicitudes", description = "Obtiene la lista completa de solicitudes de contacto registradas")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_COMERCIAL)
     public ResponseEntity<List<SolicitudContactoResponseDTO>> listarTodas(){
         return ResponseEntity.ok(solicitudService.listarTodas());
     }
 
     @GetMapping("/estado/{estadoId}")
     @Operation(summary = "Listar solicitudes por estado", description = "Filtra las solicitudes de contacto según su estado")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_COMERCIAL)
     public ResponseEntity<List<SolicitudContactoResponseDTO>> listarPorEstado(@PathVariable Integer estadoId){
         return ResponseEntity.ok(solicitudService.listarPorEstado(estadoId));
     }
 
     @GetMapping("/proyecto/{proyectoId}")
     @Operation(summary = "Listar solicitudes por proyecto", description = "Filtra las solicitudes de contacto asociadas a un proyecto específico")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_COMERCIAL)
     public ResponseEntity<List<SolicitudContactoResponseDTO>> listarPorProyecto(@PathVariable Long proyectoId){
         return ResponseEntity.ok(solicitudService.listarPorProyecto(proyectoId));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener solicitud por ID", description = "Retorna la información detallada de una solicitud de contacto")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_COMERCIAL)
     public ResponseEntity<SolicitudContactoResponseDTO> obtenerPorId(@PathVariable Long id){
         return solicitudService.obtenerPorId(id)
                 .map(ResponseEntity::ok)
@@ -76,7 +77,7 @@ public class SolicitudContactoController {
 
     @PatchMapping("/{id}/atender")
     @Operation(summary = "Atender solicitud", description = "Actualiza el estado y observaciones internas tras contactar al cliente")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_COMERCIAL)
     @Auditable(accion = "ATENDER_SOLICITUD_CONTACTO", entidad = "SOLICITUDES_CONTACTO", descripcion = "Atención y actualización de estado de solicitud de contacto")
     public ResponseEntity<SolicitudContactoResponseDTO> atenderSolicitud(
             @PathVariable Long id,

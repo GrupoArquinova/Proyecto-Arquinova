@@ -60,7 +60,7 @@ class AIServiceTest {
                     String reglas = cuerpo.at("/systemInstruction/parts/0/text").asText();
                     assertTrue(reglas.contains("Villa Samán"), "las reglas deben incluir los datos reales");
                     assertTrue(reglas.contains("Nunca indiques ni estimes precios"));
-                    assertTrue(cuerpo.at("/generationConfig/thinkingConfig").isMissingNode());
+                    assertEquals("minimal", cuerpo.at("/generationConfig/thinkingConfig/thinkingLevel").asText());
                 })
                 .andRespond(withSuccess(respuestaConTexto("ok"), MediaType.APPLICATION_JSON));
 

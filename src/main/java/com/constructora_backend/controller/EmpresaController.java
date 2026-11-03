@@ -17,6 +17,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.constructora_backend.security.Permisos;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,7 +37,7 @@ public class EmpresaController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Operation(summary = "Listar empresas", description = "Retorna el catálogo de empresas registradas. Permite filtrar por solo activas mediante query parameter.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Lista recuperada exitosamente",
@@ -50,7 +51,7 @@ public class EmpresaController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Operation(summary = "Obtener empresa por ID", description = "Retorna la información detallada de una empresa específica según su ID.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Empresa encontrada",
@@ -65,7 +66,7 @@ public class EmpresaController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "CREAR_EMPRESA", entidad = "EMPRESAS", descripcion = "Registro de nueva empresa constructora")
     @Operation(summary = "Crear una nueva empresa", description = "Registra una nueva empresa constructora en el sistema.")
     @ApiResponses(value = {
@@ -80,7 +81,7 @@ public class EmpresaController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ACTUALIZAR_EMPRESA", entidad = "EMPRESAS", descripcion = "Actualización de datos institucionales de la empresa")
     @Operation(summary = "Actualizar empresa existente", description = "Modifica los datos institucionales o comerciales de una empresa según su ID.")
     @ApiResponses(value = {
@@ -98,7 +99,7 @@ public class EmpresaController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "DESACTIVAR_EMPRESA", entidad = "EMPRESAS", descripcion = "Desactivación lógica de empresa")
     @Operation(summary = "Desactivar una empresa", description = "Cambia el estado de la empresa a inactivo sin eliminar los registros históricos.")
     @ApiResponses(value = {

@@ -17,6 +17,9 @@ public interface ProyectoRepository extends JpaRepository<Proyecto, Long> {
     Optional<Proyecto> findByEmpresaIdAndSlug(Long empresaId, String slug);
     boolean existsByEmpresaIdAndSlug(Long empresaId, String slug);
 
+    /** true si el proyecto existe y lo puede ver el sitio público (publicado y activo). */
+    boolean existsByIdAndPublicadoTrueAndActivoTrue(Long id);
+
     /** Solo un proyecto por empresa puede ser el destacado del inicio: se lo quita a los demás. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update Proyecto p set p.destacado = false where p.empresa.id = :empresaId and p.id <> :id and p.destacado = true")

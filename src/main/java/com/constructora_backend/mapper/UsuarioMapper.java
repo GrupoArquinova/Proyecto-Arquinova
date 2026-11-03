@@ -2,6 +2,7 @@ package com.constructora_backend.mapper;
 
 import com.constructora_backend.dto.request.UsuarioRequestDTO;
 import com.constructora_backend.dto.request.UsuarioUpdateDTO;
+import com.constructora_backend.dto.response.RolDTO;
 import com.constructora_backend.dto.response.UsuarioResponseDTO;
 import com.constructora_backend.entity.Rol;
 import com.constructora_backend.entity.Usuario;
@@ -20,6 +21,7 @@ public class UsuarioMapper {
         dto.setNombreCompleto(usuario.getNombreCompleto());
         dto.setCorreo(usuario.getCorreo());
         dto.setRolId(usuario.getRol() != null ? usuario.getRol().getId() : null);
+        dto.setRolNombre(usuario.getRol() != null ? RolDTO.nombreSinPrefijo(usuario.getRol().getNombre()) : null);
         dto.setActivo(usuario.getActivo());
         dto.setUltimoAccesoEn(usuario.getUltimoAccesoEn());
         dto.setCreadoEn(usuario.getCreadoEn());

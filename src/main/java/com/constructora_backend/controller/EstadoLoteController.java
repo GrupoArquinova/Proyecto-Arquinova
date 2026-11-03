@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.constructora_backend.security.Permisos;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.constructora_backend.aspect.Auditable;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,20 +26,20 @@ public class EstadoLoteController {
 
     @GetMapping
     @Operation(summary = "Listar todos los estados", description = "Obtiene todos los estados (incluidos inactivos)")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.LECTURA_INTERNA)
     public ResponseEntity<List<EstadoLoteResponseDTO>> listarTodos() {
         return ResponseEntity.ok(estadoLoteService.listarTodos());
     }
 
     @GetMapping("/activos")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.LECTURA_INTERNA)
     @Operation(summary = "Listar estados activos", description = "Obtiene los estados que están actualmente activos")
     public ResponseEntity<List<EstadoLoteResponseDTO>> listarActivos() {
         return ResponseEntity.ok(estadoLoteService.listarActivos());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.LECTURA_INTERNA)
     @Operation(summary = "Obtener estado por ID", description = "Retorna los detalles de un estado")
     public ResponseEntity<EstadoLoteResponseDTO> obtenerPorId(@PathVariable Integer id) {
         return estadoLoteService.obtenerPorId(id)
@@ -48,7 +49,7 @@ public class EstadoLoteController {
 
     @PostMapping
     @Operation(summary = "Crear estado", description = "Crea un nuevo estado de lote")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "CREAR_ESTADO_LOTE", entidad = "ESTADOS_LOTE", descripcion = "Creación de estado de lote")
     public ResponseEntity<EstadoLoteResponseDTO> crear(@Valid @RequestBody EstadoLoteRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(estadoLoteService.guardar(dto));
@@ -56,7 +57,7 @@ public class EstadoLoteController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar estado", description = "Actualiza los datos de un estado existente")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ACTUALIZAR_ESTADO_LOTE", entidad = "ESTADOS_LOTE", descripcion = "Actualización de estado de lote")
     public ResponseEntity<EstadoLoteResponseDTO> actualizar(@PathVariable Integer id, @Valid @RequestBody EstadoLoteRequestDTO dto) {
         return ResponseEntity.ok(estadoLoteService.actualizar(id, dto));
@@ -64,7 +65,7 @@ public class EstadoLoteController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar estado", description = "Elimina permanentemente un estado de lote")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ELIMINAR_ESTADO_LOTE", entidad = "ESTADOS_LOTE", descripcion = "Eliminación de estado de lote")
     public ResponseEntity<Void> eliminar(@PathVariable Integer id) {
         estadoLoteService.eliminar(id);

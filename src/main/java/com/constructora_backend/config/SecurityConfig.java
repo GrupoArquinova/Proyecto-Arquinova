@@ -46,6 +46,14 @@ public class SecurityConfig {
     @Value("${app.seguridad.docs-publicas:false}")
     private boolean docsPublicas;
 
+    /** Rutas de contenido del sitio que también puede escribir un EDITOR (además del administrador). */
+    static final String[] RUTAS_CONTENIDO = {
+            "/api/proyectos/**", "/api/ubicaciones/**", "/api/casas-modelo/**", "/api/zonas-comunes/**",
+            "/api/zonas-comunes-imagenes/**", "/api/etapas/**", "/api/lotes/**", "/api/estados-lote/**",
+            "/api/multimedia/**", "/api/contenidos-institucionales/**", "/api/empresas/**", "/api/puntos-360/**",
+            "/api/cloudinary/**"
+    };
+
     /** La API solo devuelve JSON: nada puede cargar scripts, estilos ni imágenes de ella, ni incrustarla en otra página. */
     private static final String CSP_API = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'";
     /** Con Swagger abierto la interfaz necesita sus propios scripts y estilos. */
@@ -100,6 +108,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/solicitudes-contacto/publico").permitAll()
                         .requestMatchers("/api/chat/**").permitAll()
+                        // Analítica propia sin cookies: los eventos los manda el navegador de cualquier visitante
+                        .requestMatchers(HttpMethod.POST, "/api/analitica/evento").permitAll()
+                        // Sitemap y demás lecturas pensadas para buscadores
+                        .requestMatchers(HttpMethod.GET, "/api/publico/**").permitAll()
                         // Lecturas públicas del sitio. Los endpoints solo-admin dentro de estas rutas
                         // (p. ej. GET /api/lotes) se protegen con @PreAuthorize en el controlador.
                         .requestMatchers(HttpMethod.GET,
@@ -118,12 +130,27 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/actuator/prometheus").hasRole("METRICAS")
                         .requestMatchers("/actuator/**").hasRole("ADMINISTRADOR")
+                        // Métricas del panel: el comercial las ve (solo lectura); el resto de /api/admin/** es de administradores
+                        .requestMatchers(HttpMethod.GET, "/api/admin/metricas").hasAnyRole("ADMINISTRADOR", "COMERCIAL")
                         .requestMatchers("/api/admin/**").hasRole("ADMINISTRADOR")
                         // Cualquier persona con sesión puede editar SU perfil (PUT /api/usuarios/{id}); el servicio solo le deja
                         // cambiar nombre y contraseña, y @PreAuthorize comprueba que sea el dueño. Va antes de la regla general.
                         .requestMatchers(HttpMethod.PUT, "/api/usuarios/*").authenticated()
+                        // Escritura por rol. Van antes de la regla por defecto y solo abren lo que le corresponde a cada rol:
+                        //  - EDITOR (y administrador): el contenido del sitio.
+                        //  - COMERCIAL (y administrador): estados de solicitud y la atención de solicitudes (cambiar estado y notas).
+                        // Borrar solicitudes (por ID o por correo del titular) sigue siendo solo de administradores.
+                        .requestMatchers(HttpMethod.POST, RUTAS_CONTENIDO).hasAnyRole("ADMINISTRADOR", "EDITOR")
+                        .requestMatchers(HttpMethod.PUT, RUTAS_CONTENIDO).hasAnyRole("ADMINISTRADOR", "EDITOR")
+                        .requestMatchers(HttpMethod.PATCH, RUTAS_CONTENIDO).hasAnyRole("ADMINISTRADOR", "EDITOR")
+                        .requestMatchers(HttpMethod.DELETE, RUTAS_CONTENIDO).hasAnyRole("ADMINISTRADOR", "EDITOR")
+                        .requestMatchers(HttpMethod.POST, "/api/estados-solicitud/**").hasAnyRole("ADMINISTRADOR", "COMERCIAL")
+                        .requestMatchers(HttpMethod.PUT, "/api/estados-solicitud/**").hasAnyRole("ADMINISTRADOR", "COMERCIAL")
+                        .requestMatchers(HttpMethod.PATCH, "/api/estados-solicitud/**").hasAnyRole("ADMINISTRADOR", "COMERCIAL")
+                        .requestMatchers(HttpMethod.DELETE, "/api/estados-solicitud/**").hasAnyRole("ADMINISTRADOR", "COMERCIAL")
+                        .requestMatchers(HttpMethod.PATCH, "/api/solicitudes-contacto/*/atender").hasAnyRole("ADMINISTRADOR", "COMERCIAL")
                         // Regla por defecto: escribir en la API es cosa de administradores. Las excepciones públicas (/api/auth/**,
-                        // POST contacto público, /api/chat/**) y el perfil propio ya quedaron arriba. Así un endpoint nuevo
+                        // POST contacto público, /api/chat/**, analítica) y el perfil propio ya quedaron arriba. Así un endpoint nuevo
                         // sin @PreAuthorize no queda abierto por olvido.
                         .requestMatchers(HttpMethod.POST, "/api/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.PUT, "/api/**").hasRole("ADMINISTRADOR")

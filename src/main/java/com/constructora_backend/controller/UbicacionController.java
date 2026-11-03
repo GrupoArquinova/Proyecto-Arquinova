@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import com.constructora_backend.security.Permisos;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
@@ -31,13 +32,13 @@ public class UbicacionController {
     @Operation(summary = "Listar todas las ubicaciones", description = "Obtiene una lista de todas las ubicaciones registradas")
     public ResponseEntity<List<UbicacionResponseDTO>> listarTodas(Authentication authentication) {
         // Sin sesión de administrador solo las ubicaciones de proyectos publicados y activos
-        return ResponseEntity.ok(UserSecurityHelper.esAdmin(authentication) ? ubicacionService.listarTodas() : ubicacionService.listarPublicas());
+        return ResponseEntity.ok(Permisos.puedeLeerTodo(authentication) ? ubicacionService.listarTodas() : ubicacionService.listarPublicas());
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener ubicación por ID", description = "Obtiene los detalles de una ubicación específica")
     public ResponseEntity<UbicacionResponseDTO> obtenerPorId(@PathVariable Long id, Authentication authentication) {
-        return (UserSecurityHelper.esAdmin(authentication) ? ubicacionService.obtenerPorId(id) : ubicacionService.obtenerPublicaPorId(id))
+        return (Permisos.puedeLeerTodo(authentication) ? ubicacionService.obtenerPorId(id) : ubicacionService.obtenerPublicaPorId(id))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -45,7 +46,7 @@ public class UbicacionController {
     @GetMapping("/proyecto/{proyectoId}")
     @Operation(summary = "Obtener ubicación por ID de proyecto", description = "Obtiene la ubicación asignada a un proyecto específico")
     public ResponseEntity<UbicacionResponseDTO> obtenerPorProyectoId(@PathVariable Long proyectoId, Authentication authentication) {
-        return (UserSecurityHelper.esAdmin(authentication) ? ubicacionService.obtenerPorProyectoId(proyectoId) : ubicacionService.obtenerPublicaPorProyectoId(proyectoId))
+        return (Permisos.puedeLeerTodo(authentication) ? ubicacionService.obtenerPorProyectoId(proyectoId) : ubicacionService.obtenerPublicaPorProyectoId(proyectoId))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -53,12 +54,12 @@ public class UbicacionController {
     @GetMapping("/ciudad/{ciudad}")
     @Operation(summary = "Listar ubicaciones por ciudad", description = "Busca y retorna todas las ubicaciones en una ciudad dada")
     public ResponseEntity<List<UbicacionResponseDTO>> listarPorCiudad(@PathVariable String ciudad, Authentication authentication) {
-        return ResponseEntity.ok(UserSecurityHelper.esAdmin(authentication) ? ubicacionService.listarPorCiudad(ciudad) : ubicacionService.listarPublicasPorCiudad(ciudad));
+        return ResponseEntity.ok(Permisos.puedeLeerTodo(authentication) ? ubicacionService.listarPorCiudad(ciudad) : ubicacionService.listarPublicasPorCiudad(ciudad));
     }
 
     @PostMapping
     @Operation(summary = "Crear ubicación", description = "Registra una nueva ubicación para un proyecto")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "CREAR_UBICACION", entidad = "UBICACIONES", descripcion = "Creación de ubicación")
     public ResponseEntity<UbicacionResponseDTO> crear(@Valid @RequestBody UbicacionRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ubicacionService.guardar(dto));
@@ -66,7 +67,7 @@ public class UbicacionController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Actualizar ubicación", description = "Modifica los datos de una ubicación existente")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ACTUALIZAR_UBICACION", entidad = "UBICACIONES", descripcion = "Actualización de ubicación")
     public ResponseEntity<UbicacionResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody UbicacionRequestDTO dto) {
         return ResponseEntity.ok(ubicacionService.actualizar(id, dto));
@@ -74,7 +75,7 @@ public class UbicacionController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar ubicación", description = "Elimina una ubicación del sistema")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize(Permisos.ADMIN_O_EDITOR)
     @Auditable(accion = "ELIMINAR_UBICACION", entidad = "UBICACIONES", descripcion = "Eliminación de ubicación")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         ubicacionService.eliminar(id);
