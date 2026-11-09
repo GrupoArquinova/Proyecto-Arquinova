@@ -35,4 +35,9 @@ public interface AuditoriaRepository extends JpaRepository<Auditoria, Long>, Jpa
     @Modifying
     @Query("delete from Auditoria a where a.creadoEn < :limite")
     int eliminarAnterioresA(@Param("limite") LocalDateTime limite);
+
+    /** Borra los registros elegidos a mano en el panel; devuelve cuántos existían. */
+    @Modifying
+    @Query("delete from Auditoria a where a.id in :ids")
+    int eliminarPorIds(@Param("ids") java.util.Collection<Long> ids);
 }

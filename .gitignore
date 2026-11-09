@@ -56,3 +56,8 @@ prometheus/metricas_token
 respaldos/
 *.sql.gz
 *.sql.gz.enc
+
+# Llaves y credenciales (Google Wallet, etc.): nunca al repositorio
+/credenciales/
+**/*wallet*.json
+!**/src/test/**/*wallet*.json

@@ -124,6 +124,67 @@ class HistorialCambiosIntegracionTest {
     }
 
     @Test
+    @DisplayName("Eliminar lo elegido: borra solo esos registros, lo anota en el historial y rechaza una selección vacía")
+    void eliminarSeleccion() {
+        String entidad = "ZZ_BORRAR_" + FixturasContenido.sufijo();
+        Auditoria a1 = evento(entidad, "CREAR_COSA", "Uno", null);
+        Auditoria a2 = evento(entidad, "CREAR_COSA", "Dos", null);
+        Auditoria a3 = evento(entidad, "CREAR_COSA", "Tres", null);
+
+        long eliminados = auditoriaService.eliminarSeleccion(java.util.Arrays.asList(a1.getId(), a2.getId(), a2.getId(), null, 987654321L), null);
+        em.clear();
+
+        assertEquals(2, eliminados, "los repetidos, los nulos y los que no existen no cuentan");
+        assertFalse(auditoriaRepository.existsById(a1.getId()));
+        assertFalse(auditoriaRepository.existsById(a2.getId()));
+        assertTrue(auditoriaRepository.existsById(a3.getId()), "lo que no se eligió se queda");
+        PaginaDTO<AuditoriaResponseDTO> anotacion = auditoriaService.buscar(null, "HISTORIAL", "ELIMINAR_HISTORIAL", null, null, null, 0, 5);
+        assertTrue(anotacion.getContenido().stream().anyMatch(r -> r.getDescripcion().contains("Eliminó 2 registros")
+                && r.getDescripcion().contains("selección manual")), "queda anotado quién limpió y cuántos");
+
+        assertThrows(BadRequestException.class, () -> auditoriaService.eliminarSeleccion(java.util.List.of(), null));
+        assertThrows(BadRequestException.class, () -> auditoriaService.eliminarSeleccion(null, null));
+    }
+
+    @Test
+    @DisplayName("Eliminar por filtros: borra solo lo que coincide; sin ningún filtro exige confirmar y entonces borra todo menos la anotación")
+    void eliminarFiltrados() {
+        String entidad = "ZZ_FILTRO_" + FixturasContenido.sufijo();
+        Auditoria viejo = evento(entidad, "CREAR_COSA", "Viejo", null);
+        Auditoria reciente = evento(entidad, "CREAR_COSA", "Reciente", null);
+        Auditoria otro = evento("ZZ_OTRA_" + FixturasContenido.sufijo(), "CREAR_COSA", "Otra entidad", null);
+        fechar(viejo, LocalDateTime.of(2020, 1, 10, 8, 0));
+        fechar(reciente, LocalDateTime.of(2020, 3, 10, 8, 0));
+        fechar(otro, LocalDateTime.of(2020, 1, 10, 8, 0));
+
+        // Antes del 1 de marzo y de esa entidad: solo cae el viejo
+        long n = auditoriaService.eliminarFiltrados(null, entidad, null, null, null, LocalDate.of(2020, 2, 28), false, null);
+        em.clear();
+        assertEquals(1, n);
+        assertFalse(auditoriaRepository.existsById(viejo.getId()));
+        assertTrue(auditoriaRepository.existsById(reciente.getId()));
+        assertTrue(auditoriaRepository.existsById(otro.getId()), "otra entidad no se toca");
+
+        // Sin filtros y sin confirmar: se rechaza y no se borra nada
+        long antes = auditoriaRepository.count();
+        assertThrows(BadRequestException.class, () -> auditoriaService.eliminarFiltrados(null, null, null, "  ", null, null, false, null));
+        assertEquals(antes, auditoriaRepository.count());
+        assertThrows(BadRequestException.class,
+                () -> auditoriaService.eliminarFiltrados(null, null, null, null, LocalDate.of(2020, 6, 1), LocalDate.of(2020, 5, 1), true, null));
+
+        // Sin filtros y confirmado: se vacía el historial y solo queda la anotación de la limpieza
+        long todo = auditoriaService.eliminarFiltrados(null, null, null, null, null, null, true, null);
+        em.clear();
+        assertEquals(antes, todo);
+        assertEquals(1, auditoriaRepository.count(), "queda solo la anotación de que se limpió");
+        assertEquals("ELIMINAR_HISTORIAL", auditoriaRepository.findAll().get(0).getAccion());
+
+        // Si ya no hay nada que borrar no se anota nada nuevo
+        auditoriaService.eliminarFiltrados(null, "NO_EXISTE_" + FixturasContenido.sufijo(), null, null, null, null, false, null);
+        assertEquals(1, auditoriaRepository.count());
+    }
+
+    @Test
     @DisplayName("Búsqueda: filtros por entidad, acción, texto, usuario y fechas; paginada y con lo más reciente primero")
     void busquedaFiltradaYPaginada() {
         String entidad = "ZZ_PRUEBA_" + FixturasContenido.sufijo();

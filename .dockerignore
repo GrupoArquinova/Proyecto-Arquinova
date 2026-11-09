@@ -16,3 +16,5 @@ HELP.md
 k8s/
 grafana/
 prometheus/
+credenciales/
+**/*wallet*.json

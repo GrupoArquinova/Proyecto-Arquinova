@@ -133,6 +133,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             case CHAT -> RateLimitConfig.CHAT_LIMIT;
             case ANALITICA -> RateLimitConfig.ANALITICA_LIMIT;
             case BROCHURE -> RateLimitConfig.BROCHURE_LIMIT;
+            case WALLET -> RateLimitConfig.WALLET_LIMIT;
             case NONE -> Long.MAX_VALUE;
         };
     }

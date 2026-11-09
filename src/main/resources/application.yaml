@@ -239,3 +239,20 @@ gemini:
   conexion-segundos: 5
   respuesta-segundos: ${GEMINI_RESPUESTA_SEGUNDOS:10}
   pregunta-max: 500
+
+# ─── Google Wallet: tarjeta digital de la empresa con el QR del sitio ──────────
+# La llave privada de la cuenta de servicio NUNCA va en el repositorio ni en el .jar. Se entrega con UNA de estas dos variables:
+#   GOOGLE_WALLET_CREDENCIALES          el JSON de la cuenta de servicio, tal cual o en base64 (Render)
+#   GOOGLE_WALLET_CREDENCIALES_ARCHIVO  ruta de un archivo con ese JSON (equipo local)
+# Sin ninguna, la tarjeta queda apagada y el sitio responde 503. El QR lleva APP_SITIO_URL.
+google:
+  wallet:
+    issuer-id: ${GOOGLE_WALLET_ISSUER_ID:3388000000023232718}
+    class-id: ${GOOGLE_WALLET_CLASS_ID:3388000000023232718.arquinova_pass}
+    credenciales: ${GOOGLE_WALLET_CREDENCIALES:}
+    credenciales-archivo: ${GOOGLE_WALLET_CREDENCIALES_ARCHIVO:}
+    logo-url: ${GOOGLE_WALLET_LOGO_URL:https://res.cloudinary.com/dn3s7utod/image/upload/v1790258444/logo-Arquinova_dgkosg.jpg}
+    color: ${GOOGLE_WALLET_COLOR:#2c5953}
+    # Topes globales de correos con la tarjeta (además de 1 por hora y por dirección, y 5 por minuto y por IP)
+    max-por-hora: ${GOOGLE_WALLET_MAX_POR_HORA:30}
+    max-por-dia: ${GOOGLE_WALLET_MAX_POR_DIA:200}

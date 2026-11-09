@@ -124,6 +124,50 @@ public class AuditoriaService {
         return auditoriaRepository.eliminarAnterioresA(limite);
     }
 
+    /**
+     * Elimina los registros elegidos a mano. La eliminación misma queda anotada en el historial (quién borró cuántos), para que
+     * limpiar no sea una forma de ocultar lo que se hizo.
+     */
+    @Transactional
+    public long eliminarSeleccion(List<Long> ids, HttpServletRequest request) {
+        List<Long> distintos = ids == null ? List.of() : ids.stream().filter(java.util.Objects::nonNull).distinct().toList();
+        if (distintos.isEmpty()) {
+            throw new BadRequestException("Elige al menos un registro");
+        }
+        long eliminados = auditoriaRepository.eliminarPorIds(distintos);
+        anotarLimpieza(eliminados, "selección manual", request);
+        return eliminados;
+    }
+
+    /**
+     * Elimina todo lo que coincida con los filtros. Sin ningún filtro se borra TODO el historial, y solo se hace si se confirmó
+     * expresamente (un olvido en la pantalla no debe vaciarlo).
+     */
+    @Transactional
+    public long eliminarFiltrados(Long usuarioId, String entidad, String accion, String texto, LocalDate desde, LocalDate hasta,
+                                  boolean confirmarTodo, HttpServletRequest request) {
+        if (desde != null && hasta != null && desde.isAfter(hasta)) {
+            throw new BadRequestException("La fecha 'desde' no puede ser posterior a 'hasta'");
+        }
+        boolean sinFiltros = usuarioId == null && (entidad == null || entidad.isBlank()) && (accion == null || accion.isBlank())
+                && (texto == null || texto.isBlank()) && desde == null && hasta == null;
+        if (sinFiltros && !confirmarTodo) {
+            throw new BadRequestException("Para eliminar todo el historial hay que confirmarlo");
+        }
+        long eliminados = auditoriaRepository.delete(filtro(usuarioId, entidad, accion, texto, desde, hasta));
+        anotarLimpieza(eliminados, sinFiltros ? "todo el historial" : "según los filtros aplicados", request);
+        return eliminados;
+    }
+
+    private void anotarLimpieza(long eliminados, String criterio, HttpServletRequest request) {
+        if (eliminados <= 0) {
+            return;
+        }
+        registrarEvento("ELIMINAR_HISTORIAL", "HISTORIAL", null,
+                "Eliminó " + eliminados + (eliminados == 1 ? " registro" : " registros") + " del historial de cambios (" + criterio + ")",
+                request);
+    }
+
     static Specification<Auditoria> filtro(Long usuarioId, String entidad, String accion, String texto,
                                            LocalDate desde, LocalDate hasta) {
         return (raiz, consulta, cb) -> {

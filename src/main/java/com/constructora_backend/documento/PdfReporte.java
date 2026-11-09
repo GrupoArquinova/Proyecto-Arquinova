@@ -39,10 +39,15 @@ public final class PdfReporte implements AutoCloseable {
     private static final float ALTO_CABECERA = 58f;
     private static final float ALTO_LOGO = 38f;
     private static final String RECURSO_LOGO = "/documento/logo-arquinova.jpg";
+    /** Tablas: alto de cada línea de texto de una celda y relleno vertical total de la fila (el texto largo se parte en líneas). */
+    private static final float INTERLINEA_TABLA = 11f;
+    private static final float ALTO_RELLENO_FILA = 6f;
     private static final float PIE = 40f;
     /** Espacio extra al pie de cada hoja cuando el documento lleva un aviso (una línea pequeña sobre la línea del pie). */
     private static final float PIE_CON_AVISO = 62f;
     private static final DateTimeFormatter EMISION = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    /** Símbolos que las fuentes estándar del PDF no tienen y que sí se usan en el historial ("no → sí"): se escriben con letras. */
+    private static final Map<Character, String> SIMBOLOS = Map.of('→', "->", '←', "<-", '↔', "<->", '⇒', "=>", '≥', ">=", '≤', "<=", '≠', "!=");
     private static final CharsetEncoder WIN_ANSI = Charset.forName("windows-1252").newEncoder();
 
     private final PDDocument documento = new PDDocument();
@@ -167,30 +172,53 @@ public final class PdfReporte implements AutoCloseable {
             return;
         }
 
+        // Una hoja nueva deja este alto útil para filas: sirve para decidir si una fila corta cabe entera o salta de hoja
+        final float altoUtilHoja = tamano.getHeight() - ALTO_CABECERA - 14 - piePagina - 8 - 20 - ALTO_RELLENO_FILA;
         int i = 0;
         for (T fila : filas) {
-            if (y - altoFila < piePagina + 8) {
-                nuevaPagina();
-                encabezadoTabla(columnas, anchos);
-            }
-            if (i++ % 2 == 1) relleno(MARGEN, y - altoFila, ancho(), altoFila, ZEBRA);
-            float x = MARGEN;
+            // Cada celda se parte en las líneas que necesite: ningún texto se recorta; la fila crece con su celda más larga
+            List<List<String>> celdas = new ArrayList<>();
+            int lineasFila = 1;
             for (int c = 0; c < columnas.size(); c++) {
-                celda(columnas.get(c).formatear(columnas.get(c).valor().apply(fila)), x, anchos[c], y, normal, tamanoLetra,
-                        columnas.get(c).esNumerica(), TEXTO);
-                x += anchos[c];
+                Columna<T> col = columnas.get(c);
+                List<String> lineas = envolver(col.formatear(col.valor().apply(fila)), normal, tamanoLetra, Math.max(anchos[c] - 8, 10f));
+                celdas.add(lineas);
+                lineasFila = Math.max(lineasFila, lineas.size());
             }
-            linea(MARGEN, y - altoFila, MARGEN + ancho(), y - altoFila, LINEA, 0.4f);
-            y -= altoFila;
+            boolean zebra = i++ % 2 == 1;
+
+            int desde = 0;
+            while (desde < lineasFila) {
+                int caben = (int) ((y - (piePagina + 8) - ALTO_RELLENO_FILA) / INTERLINEA_TABLA);
+                boolean cabeEnHojaNueva = lineasFila * INTERLINEA_TABLA <= altoUtilHoja;
+                if (caben < 1 || (desde == 0 && lineasFila > caben && cabeEnHojaNueva)) {
+                    nuevaPagina();
+                    encabezadoTabla(columnas, anchos);
+                    continue;
+                }
+                // Si la fila es más alta que una hoja entera, continúa en la siguiente por líneas
+                int hasta = Math.min(lineasFila, desde + caben);
+                float alto = (hasta - desde) * INTERLINEA_TABLA + ALTO_RELLENO_FILA;
+                if (zebra) relleno(MARGEN, y - alto, ancho(), alto, ZEBRA);
+                float x = MARGEN;
+                for (int c = 0; c < columnas.size(); c++) {
+                    List<String> lineas = celdas.get(c);
+                    for (int k = desde; k < Math.min(hasta, lineas.size()); k++) {
+                        float inicio = columnas.get(c).esNumerica()
+                                ? x + anchos[c] - 4 - ancho(lineas.get(k), normal, tamanoLetra) : x + 4;
+                        escribir(flujo, lineas.get(k), inicio, y - 11 - (k - desde) * INTERLINEA_TABLA, normal, tamanoLetra, TEXTO);
+                    }
+                    x += anchos[c];
+                }
+                linea(MARGEN, y - alto, MARGEN + ancho(), y - alto, LINEA, 0.4f);
+                y -= alto;
+                desde = hasta;
+            }
         }
 
         if (columnas.stream().anyMatch(Columna::sumar)) {
-            if (y - altoFila < piePagina + 8) {
-                nuevaPagina();
-                encabezadoTabla(columnas, anchos);
-            }
-            relleno(MARGEN, y - altoFila, ancho(), altoFila, VERDE_CLARO);
-            float x = MARGEN;
+            List<List<String>> celdas = new ArrayList<>();
+            int lineasTotal = 1;
             for (int c = 0; c < columnas.size(); c++) {
                 Columna<T> col = columnas.get(c);
                 String valor = c == 0 ? "TOTAL (" + filas.size() + ")" : "";
@@ -201,10 +229,26 @@ public final class PdfReporte implements AutoCloseable {
                     }
                     valor = col.formatear(col.tipo() == Columna.Tipo.ENTERO ? (Object) Math.round(suma) : (Object) suma);
                 }
-                celda(valor, x, anchos[c], y, negrita, tamanoLetra, col.esNumerica(), VERDE);
+                List<String> lineas = envolver(valor, negrita, tamanoLetra, Math.max(anchos[c] - 8, 10f));
+                celdas.add(lineas);
+                lineasTotal = Math.max(lineasTotal, lineas.size());
+            }
+            float alto = lineasTotal * INTERLINEA_TABLA + ALTO_RELLENO_FILA;
+            if (y - alto < piePagina + 8) {
+                nuevaPagina();
+                encabezadoTabla(columnas, anchos);
+            }
+            relleno(MARGEN, y - alto, ancho(), alto, VERDE_CLARO);
+            float x = MARGEN;
+            for (int c = 0; c < columnas.size(); c++) {
+                List<String> lineas = celdas.get(c);
+                for (int k = 0; k < lineas.size(); k++) {
+                    float inicio = columnas.get(c).esNumerica() ? x + anchos[c] - 4 - ancho(lineas.get(k), negrita, tamanoLetra) : x + 4;
+                    escribir(flujo, lineas.get(k), inicio, y - 11 - k * INTERLINEA_TABLA, negrita, tamanoLetra, VERDE);
+                }
                 x += anchos[c];
             }
-            y -= altoFila;
+            y -= alto;
         }
         y -= 6;
     }
@@ -287,32 +331,32 @@ public final class PdfReporte implements AutoCloseable {
 
     /**
      * Ancho de cada columna según lo que contiene: las fechas, cifras y Sí/No se muestran completas; el espacio que queda se
-     * reparte entre las de texto, que se recortan con "..." si no caben. Así una fecha nunca sale cortada.
+     * reparte entre las de texto, que si no caben en una línea se parten en varias (la fila crece): nada se recorta.
      */
     private <T> float[] anchosColumnas(List<Columna<T>> columnas, List<T> filas) throws IOException {
         int n = columnas.size();
-        float[] natural = new float[n];
+        float[] natural = new float[n];       // ancho que necesitaría el texto más largo en una sola línea
+        float[] minimo = new float[n];        // el título del encabezado completo y, como mucho, 110 pt de la palabra más larga
         for (int i = 0; i < n; i++) {
             Columna<T> col = columnas.get(i);
+            float titulo = ancho(col.titulo(), negrita, 9) + 12f;
             float max = ancho(col.titulo(), negrita, 9);
+            float palabra = 0;
             for (int f = 0; f < Math.min(filas.size(), 300); f++) {
-                max = Math.max(max, ancho(col.formatear(col.valor().apply(filas.get(f))), normal, 8.5f));
+                String valor = col.formatear(col.valor().apply(filas.get(f)));
+                max = Math.max(max, ancho(valor, normal, 8.5f));
+                for (String p : limpiar(valor).split(" ")) palabra = Math.max(palabra, ancho(p, normal, 8.5f));
             }
             natural[i] = max + 12f;
+            minimo[i] = Math.max(titulo, Math.max(48f, Math.min(palabra + 12f, 110f)));
         }
 
         float disponible = ancho();
         float fijos = 0;
-        float textoNatural = 0;
         int columnasTexto = 0;
         for (int i = 0; i < n; i++) {
-            if (columnas.get(i).tipo() == Columna.Tipo.TEXTO) {
-                natural[i] = Math.min(natural[i], disponible * 0.32f);
-                textoNatural += natural[i];
-                columnasTexto++;
-            } else {
-                fijos += natural[i];
-            }
+            if (columnas.get(i).tipo() == Columna.Tipo.TEXTO) columnasTexto++;
+            else fijos += natural[i];
         }
 
         float[] anchos = new float[n];
@@ -320,55 +364,81 @@ public final class PdfReporte implements AutoCloseable {
             for (int i = 0; i < n; i++) anchos[i] = disponible * natural[i] / fijos;
             return anchos;
         }
-        float paraTexto = Math.max(disponible - fijos, 36f * columnasTexto);
-        if (textoNatural <= paraTexto) {
-            // Todo cabe: el espacio sobrante se reparte entre las columnas de texto
-            float factor = paraTexto / textoNatural;
-            for (int i = 0; i < n; i++) anchos[i] = columnas.get(i).tipo() == Columna.Tipo.TEXTO ? natural[i] * factor : natural[i];
-        } else {
-            // No cabe: las columnas cortas (teléfono, estado, lote) se quedan completas y las largas (mensaje, correo) se recortan
-            List<Integer> orden = new ArrayList<>();
-            for (int i = 0; i < n; i++) {
-                if (columnas.get(i).tipo() == Columna.Tipo.TEXTO) orden.add(i);
-                else anchos[i] = natural[i];
-            }
-            orden.sort((a, b) -> Float.compare(natural[a], natural[b]));
-            float restante = paraTexto;
-            for (int k = 0; k < orden.size(); k++) {
-                int i = orden.get(k);
-                float parte = restante / (orden.size() - k);
-                anchos[i] = Math.max(36f, Math.min(natural[i], parte));
-                restante -= anchos[i];
+
+        // Peso de cada columna de texto: el que declara (en caracteres) y, si su contenido es un párrafo (más largo que toda la
+        // hoja en una línea, como un mensaje), el triple: así el texto libre recibe el espacio que las columnas cortas no usan.
+        float[] peso = new float[n];
+        List<Integer> pendientes = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            if (columnas.get(i).tipo() != Columna.Tipo.TEXTO) { anchos[i] = natural[i]; continue; }
+            peso[i] = Math.max(columnas.get(i).ancho(), 8) * (natural[i] > disponible ? 3f : 1f);
+            pendientes.add(i);
+        }
+        float restante = Math.max(disponible - fijos, 48f * columnasTexto);
+        // Las columnas a las que les basta su ancho natural se quedan con él; lo que sobra se reparte entre las demás según su peso
+        boolean cambio = true;
+        while (cambio && !pendientes.isEmpty()) {
+            cambio = false;
+            float pesos = 0;
+            for (int i : pendientes) pesos += peso[i];
+            for (int i : new ArrayList<>(pendientes)) {
+                if (natural[i] <= restante * peso[i] / pesos) {
+                    anchos[i] = Math.max(natural[i], minimo[i]);
+                    restante -= anchos[i];
+                    pendientes.remove(Integer.valueOf(i));
+                    cambio = true;
+                    break;
+                }
             }
         }
+        float pesos = 0;
+        for (int i : pendientes) pesos += peso[i];
+        for (int i : pendientes) anchos[i] = Math.max(minimo[i], restante * peso[i] / pesos);
+
         float total = 0;
         for (float a : anchos) total += a;
-        // Si aun así se pasa del ancho de la hoja (muchas columnas fijas), se reduce todo en la misma proporción
+        // Si se pasa del ancho de la hoja, se quita solo lo que a cada columna le sobra sobre su mínimo (fechas y cifras no se
+        // tocan: siguen en una línea); solo si ni así cabe se reduce todo en la misma proporción.
         if (total > disponible) {
-            float escala = disponible / total;
-            for (int i = 0; i < n; i++) anchos[i] *= escala;
+            float[] suelo = new float[n];
+            float holgura = 0;
+            for (int i = 0; i < n; i++) {
+                suelo[i] = columnas.get(i).tipo() == Columna.Tipo.TEXTO ? minimo[i] : natural[i];
+                holgura += Math.max(0f, anchos[i] - suelo[i]);
+            }
+            float exceso = total - disponible;
+            if (holgura >= exceso) {
+                for (int i = 0; i < n; i++) anchos[i] -= Math.max(0f, anchos[i] - suelo[i]) * exceso / holgura;
+            } else {
+                float escala = disponible / total;
+                for (int i = 0; i < n; i++) anchos[i] *= escala;
+            }
         }
         return anchos;
     }
 
+    /** Encabezado de la tabla: los títulos que no caben en su columna se parten en varias líneas (no se recortan). */
     private <T> void encabezadoTabla(List<Columna<T>> columnas, float[] anchos) throws IOException {
-        float alto = 20f;
+        List<List<String>> titulos = new ArrayList<>();
+        int lineas = 1;
+        for (int c = 0; c < columnas.size(); c++) {
+            List<String> partes = envolver(columnas.get(c).titulo(), negrita, 9, Math.max(anchos[c] - 8, 10f));
+            titulos.add(partes);
+            lineas = Math.max(lineas, partes.size());
+        }
+        float alto = 9f + lineas * 11f;
         asegurar(alto + 16);
         relleno(MARGEN, y - alto, ancho(), alto, VERDE);
         float x = MARGEN;
         for (int c = 0; c < columnas.size(); c++) {
-            celda(columnas.get(c).titulo(), x, anchos[c], y + 2, negrita, 9, columnas.get(c).esNumerica(), Color.WHITE);
+            List<String> partes = titulos.get(c);
+            for (int k = 0; k < partes.size(); k++) {
+                float inicio = columnas.get(c).esNumerica() ? x + anchos[c] - 4 - ancho(partes.get(k), negrita, 9) : x + 4;
+                escribir(flujo, partes.get(k), inicio, y - 13 - k * 11f, negrita, 9, Color.WHITE);
+            }
             x += anchos[c];
         }
         y -= alto;
-    }
-
-    /** Texto de una celda: se recorta con "..." si no cabe y se alinea a la derecha si es una cifra. */
-    private void celda(String texto, float x, float anchoCol, float yFila, PDType1Font fuente, float tamanoLetra, boolean derecha, Color color) throws IOException {
-        float disponible = anchoCol - 8;
-        String ajustado = ajustar(limpiar(texto), fuente, tamanoLetra, disponible);
-        float inicio = derecha ? x + anchoCol - 4 - ancho(ajustado, fuente, tamanoLetra) : x + 4;
-        escribir(flujo, ajustado, inicio, yFila - 12, fuente, tamanoLetra, color);
     }
 
     private void texto(String texto, float x, float yBase, PDType1Font fuente, float tamanoLetra, Color color) throws IOException {
@@ -423,7 +493,15 @@ public final class PdfReporte implements AutoCloseable {
                 continue;
             }
             if (!actual.isEmpty()) lineas.add(actual.toString());
-            actual = new StringBuilder(ajustar(palabra, fuente, tamanoLetra, maximo));
+            // Una palabra más ancha que la línea (un correo largo, una URL) se parte en trozos: nunca se recorta
+            String resto = palabra;
+            while (ancho(resto, fuente, tamanoLetra) > maximo) {
+                int corte = 1;
+                while (corte < resto.length() - 1 && ancho(resto.substring(0, corte + 1), fuente, tamanoLetra) <= maximo) corte++;
+                lineas.add(resto.substring(0, corte));
+                resto = resto.substring(corte);
+            }
+            actual = new StringBuilder(resto);
         }
         if (!actual.isEmpty()) lineas.add(actual.toString());
         if (lineas.isEmpty()) lineas.add("");
@@ -439,6 +517,7 @@ public final class PdfReporte implements AutoCloseable {
                 char c = texto.charAt(i);
                 if (c == '\n' || c == '\r' || c == '\t') sb.append(' ');
                 else if (c < 0x20) continue;
+                else if (SIMBOLOS.containsKey(c)) sb.append(SIMBOLOS.get(c));   // flechas y comparaciones que la fuente no trae
                 else if (WIN_ANSI.canEncode(c)) sb.append(c);
                 else if (!Character.isLowSurrogate(c)) sb.append('?');
             }

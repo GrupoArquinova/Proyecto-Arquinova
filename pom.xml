@@ -170,6 +170,13 @@
 			<version>3.0.1</version>
 		</dependency>
 
+		<!-- Google Auth Library para manejo de credenciales -->
+		<dependency>
+			<groupId>com.google.auth</groupId>
+			<artifactId>google-auth-library-oauth2-http</artifactId>
+			<version>1.23.0</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
@@ -243,4 +250,4 @@
 
 		</plugins>
 	</build>
-</project>
+</project>

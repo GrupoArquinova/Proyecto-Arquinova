@@ -38,6 +38,8 @@ public class RateLimitConfig {
     public static final int ANALITICA_LIMIT = 120;
     /** Generar un brochure PDF cuesta CPU y memoria: pocas descargas por minuto y por IP. */
     public static final int BROCHURE_LIMIT = 10;
+    /** Cada envío de la tarjeta de Google Wallet manda un correo: muy pocos por minuto y por IP. */
+    public static final int WALLET_LIMIT = 5;
     /** Respaldo global (todas las IP juntas) por minuto para el chat y para el formulario de contacto. */
     public static final int CHAT_GLOBAL_LIMIT = 120;
     public static final int PUBLIC_GLOBAL_LIMIT = 60;
@@ -63,7 +65,7 @@ public class RateLimitConfig {
     private final Map<RateCategory, Bucket> globales = new ConcurrentHashMap<>();
 
     public enum RateCategory {
-        AUTH, PUBLIC, GENERAL, CHAT, ANALITICA, BROCHURE, NONE
+        AUTH, PUBLIC, GENERAL, CHAT, ANALITICA, BROCHURE, WALLET, NONE
     }
 
     public RateLimitConfig() {
@@ -133,6 +135,10 @@ public class RateLimitConfig {
             return RateCategory.BROCHURE;
         }
 
+        if (uri.startsWith("/api/wallet")) {
+            return RateCategory.WALLET;
+        }
+
         if (uri.startsWith("/v3/api-docs") || uri.startsWith("/swagger-ui")) {
             return RateCategory.NONE;
         }
@@ -169,6 +175,10 @@ public class RateLimitConfig {
             case BROCHURE -> Bandwidth.builder()
                     .capacity(BROCHURE_LIMIT)
                     .refillGreedy(BROCHURE_LIMIT, WINDOW)
+                    .build();
+            case WALLET -> Bandwidth.builder()
+                    .capacity(WALLET_LIMIT)
+                    .refillGreedy(WALLET_LIMIT, WINDOW)
                     .build();
             case NONE -> Bandwidth.builder()
                     .capacity(Long.MAX_VALUE)
@@ -211,6 +221,7 @@ public class RateLimitConfig {
         if (key.endsWith(":CHAT")) return CHAT_LIMIT;
         if (key.endsWith(":ANALITICA")) return ANALITICA_LIMIT;
         if (key.endsWith(":BROCHURE")) return BROCHURE_LIMIT;
+        if (key.endsWith(":WALLET")) return WALLET_LIMIT;
         return Long.MAX_VALUE;
     }
 }

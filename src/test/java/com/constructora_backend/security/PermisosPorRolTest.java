@@ -139,6 +139,8 @@ class PermisosPorRolTest {
             caso(HttpMethod.POST, "/api/auditoria", ADMIN),
             caso(HttpMethod.GET, "/api/admin/auditoria", ADMIN),
             caso(HttpMethod.GET, "/api/admin/auditoria/filtros", ADMIN),
+            caso(HttpMethod.POST, "/api/admin/auditoria/eliminar-seleccion", ADMIN),
+            caso(HttpMethod.POST, "/api/admin/auditoria/eliminar-filtrados", ADMIN),
             caso(HttpMethod.GET, "/api/reportes/dashboard", ADMIN),
             caso(HttpMethod.GET, "/api/documentos/excel/solicitudes", ADMIN),
             caso(HttpMethod.POST, "/api/documentos/word/promesa-compraventa", ADMIN));

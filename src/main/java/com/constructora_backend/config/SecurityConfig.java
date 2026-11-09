@@ -128,6 +128,7 @@ public class SecurityConfig {
                                         docsPublicas || tieneRol(autenticacion.get(), "ROLE_ADMINISTRADOR")))
                         // Las sondas de salud (Render, Kubernetes) son públicas; las métricas solo con el token de Prometheus
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/api/wallet/**").permitAll()
                         .requestMatchers("/actuator/prometheus").hasRole("METRICAS")
                         .requestMatchers("/actuator/**").hasRole("ADMINISTRADOR")
                         // Métricas del panel: el comercial las ve (solo lectura); el resto de /api/admin/** es de administradores

@@ -185,7 +185,7 @@ class ReporteDocumentoServiceTest {
         assertTrue(texto.contains("Página " + paginas + " de " + paginas));
         assertTrue(texto.contains("Reporte de lotes"));
         assertTrue(texto.contains("Resumen"));
-        assertTrue(texto.contains("TOTAL (120)"));
+        assertTrue(compacto(texto).contains("TOTAL(120)"));
     }
 
     @Test
@@ -227,6 +227,62 @@ class ReporteDocumentoServiceTest {
 
         String texto = textoDe(pdf);
         assertTrue(texto.contains("quiero información"), "las tildes se conservan");
+    }
+
+    /** Sin espacios ni saltos de línea: así se compara el texto aunque el PDF lo haya partido en varias líneas. */
+    private static String compacto(String texto) {
+        return texto.replaceAll("\\s+", "");
+    }
+
+    @Test
+    @DisplayName("PDF de solicitudes: el mensaje largo y el correo largo salen completos, partidos en varias líneas y sin '...'")
+    void pdfDeSolicitudesNoRecortaElMensaje() throws IOException {
+        String mensaje = ("Buenas tardes, quisiera conocer los lotes disponibles en El Encanto, sus áreas, la forma de visitar el proyecto "
+                + "y si es posible recibir los planos de la villa Samán por correo. Gracias por su atención y quedo atento. ").repeat(4).trim();
+        String correo = "nombre.muy.largo.de.un.cliente.con.correo.extenso@dominio-de-prueba-muy-largo.com.co";
+        ReporteSolicitudItemDTO s = new ReporteSolicitudItemDTO(1L, "El Encanto", "N/A", "Ana María Ruiz de la Cruz Pérez", correo, "3001234567",
+                "NUEVO", "Sin Atender", LocalDateTime.of(2026, 10, 14, 10, 0), "Villa Samán", mensaje, null);
+        lenient().when(reporteService.consultarReporteSolicitudes(any())).thenReturn(List.of(s));
+
+        byte[] pdf = servicio.generarSolicitudesPdf(new FiltroReporteDTO());
+
+        String texto = textoDe(pdf);
+        assertTrue(compacto(texto).contains(compacto(mensaje)), "el mensaje completo aparece en el PDF");
+        assertTrue(compacto(texto).contains(compacto(correo)), "el correo completo aparece en el PDF");
+        assertTrue(compacto(texto).contains("AnaMaríaRuizdelaCruzPérez"), "el nombre completo aparece en el PDF");
+        assertFalse(texto.contains("..."), "ninguna celda se recorta con puntos suspensivos");
+    }
+
+    @Test
+    @DisplayName("PDF de actividad: la descripción, el correo y la acción salen completos")
+    void pdfDeActividadNoRecortaNada() throws IOException {
+        String descripcion = "Editó proyecto 'El Encanto' (cambió: descripcion, publicado: no → sí, imagenUrl, estadoProyecto: EN_GESTION → EN_CONSTRUCCION)";
+        ReporteActividadItemDTO a = new ReporteActividadItemDTO(1L, "Juan Gabriel Londoño Arias", "juangabriellondonoarias@gmail.com",
+                "CONSULTAR_REPORTE_ACTIVIDAD_ADMINISTRATIVA", "REPORTES", 7L, descripcion, "0:0:0:0:0:0:0:1", LocalDateTime.of(2026, 11, 9, 9, 45));
+        lenient().when(reporteService.consultarReporteActividad(any())).thenReturn(List.of(a));
+
+        String texto = compacto(textoDe(servicio.generarActividadPdf(new FiltroReporteDTO())));
+
+        assertTrue(texto.contains(compacto(descripcion.replace("→", "->"))), "la descripción completa aparece (la flecha se imprime como ->)");
+        assertTrue(texto.contains("juangabriellondonoarias@gmail.com"));
+        assertTrue(texto.contains("CONSULTAR_REPORTE_ACTIVIDAD_ADMINISTRATIVA"));
+        assertFalse(texto.contains("..."));
+    }
+
+    @Test
+    @DisplayName("PDF: una fila con un texto más alto que una hoja continúa en la siguiente sin perder líneas")
+    void pdfFilaMasAltaQueUnaHoja() throws IOException {
+        String palabras = "palabra";
+        String enorme = (palabras + " ").repeat(3000).trim();
+        ReporteSolicitudItemDTO s = new ReporteSolicitudItemDTO(1L, "El Encanto", "N/A", "Ana", "ana@correo.com", "300",
+                "NUEVO", "Sin Atender", LocalDateTime.now(), "", enorme, null);
+        lenient().when(reporteService.consultarReporteSolicitudes(any())).thenReturn(List.of(s));
+
+        byte[] pdf = servicio.generarSolicitudesPdf(new FiltroReporteDTO());
+
+        assertTrue(paginasDe(pdf) > 1, "el texto enorme ocupa varias hojas");
+        String texto = textoDe(pdf);
+        assertEquals(3000, texto.split("palabra", -1).length - 1, "no se pierde ninguna palabra");
     }
 
     @Test

@@ -281,4 +281,55 @@ public class EmailService {
         log.error("CIRCUIT BREAKER ACTIVADO [emailService]: No fue posible enviar la notificación de contacto debido a: {}.",
                 throwable.getMessage());
     }
+
+    @org.springframework.scheduling.annotation.Async("taskExecutor")
+    public void enviarCorreoConBotonWallet(String destinatario, String urlWallet) {
+        try {
+            MimeMessage mensaje = mailSender.createMimeMessage();
+            MimeMessageHelper ayudante = new MimeMessageHelper(mensaje, true, "UTF-8");
+
+            // Configurar remitente y destinatario
+            ayudante.setFrom(remitente != null && !remitente.isBlank() ? remitente : "noreply@constructora.com", "Grupo Arquinova");
+            ayudante.setTo(destinatario.trim());
+            ayudante.setSubject("Tu tarjeta digital - Grupo Arquinova");
+
+            // Cuerpo del mensaje en HTML
+            String htmlContent = """
+                <div style="font-family: Arial, sans-serif; padding: 24px; color: #1e293b; background-color: #f4f6f6; border-radius: 12px;">
+                    <div style="max-width: 520px; margin: 0 auto; background: #ffffff; padding: 32px; border-radius: 12px;">
+                        <p style="margin: 0 0 4px; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: #2c5953; font-weight: 700;">Grupo Arquinova</p>
+                        <h2 style="margin: 0 0 20px; font-size: 22px; font-weight: 600;">Tu tarjeta digital de Grupo Arquinova</h2>
+                        <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.6;">Hola,</p>
+                        <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.6;">Pediste la tarjeta digital de Grupo Arquinova. Lleva el código QR de nuestro sitio web para que nos tengas siempre a mano. Desde un teléfono Android, toca el botón para guardarla en Google Wallet:</p>
+                        
+                        <p style="margin: 0 0 24px; text-align: center;">
+                            <a href="%s" style="background-color: #2c5953; color: #ffffff; padding: 12px 28px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15px; display: inline-block;">
+                              Guardar en Google Wallet
+                            </a>
+                        </p>
+                        
+                        <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.5; color: #475569;">Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
+                        <p style="margin: 0 0 24px; font-size: 13px; line-height: 1.5; word-break: break-all;">
+                            <a href="%s" style="color: #2c5953;">%s</a>
+                        </p>
+                        
+                        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0 0 16px;">
+                        <p style="margin: 0; font-size: 12px; color: #94a3b8;">Grupo Arquinova S.A.S. · NIT 901.397.504-2</p>
+                    </div>
+                </div>
+            """.formatted(urlWallet, urlWallet, urlWallet);
+
+            String textContent = "Hola, pediste la tarjeta digital de Grupo Arquinova (lleva el QR de nuestro sitio web). Para guardarla en Google Wallet desde un teléfono Android, abre este enlace: " + urlWallet;
+
+            ayudante.setText(textContent, htmlContent);
+
+            // Despachar el correo
+            mailSender.send(mensaje);
+            log.info("Correo con el pase de Google Wallet enviado exitosamente a {}", enmascarar(destinatario));
+
+        } catch (MessagingException | UnsupportedEncodingException | MailException e) {
+            log.error("Error al enviar el correo con el pase de Google Wallet a {}: {}", enmascarar(destinatario), e.getMessage());
+            throw new MailPreparationException("No se pudo preparar o enviar el correo de Google Wallet", e);
+        }
+    }
 }

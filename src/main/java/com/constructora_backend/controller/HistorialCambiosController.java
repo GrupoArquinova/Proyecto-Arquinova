@@ -1,19 +1,26 @@
 package com.constructora_backend.controller;
 
+import com.constructora_backend.dto.request.EliminarHistorialFiltroDTO;
+import com.constructora_backend.dto.request.EliminarHistorialSeleccionDTO;
 import com.constructora_backend.dto.response.AuditoriaFiltrosDTO;
 import com.constructora_backend.dto.response.AuditoriaResponseDTO;
 import com.constructora_backend.dto.response.PaginaDTO;
+import com.constructora_backend.dto.response.ResultadoEliminacionDTO;
 import com.constructora_backend.security.Permisos;
 import com.constructora_backend.service.AuditoriaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 
 /**
- * Historial de cambios del panel: quién creó, editó o eliminó qué y cuándo. Lectura paginada y filtrable, solo para
+ * Historial de cambios del panel: quién creó, editó o eliminó qué y cuándo. Lectura paginada y filtrable y limpieza (eliminar lo elegido o lo filtrado), solo para
  * administradores (la ruta /api/admin/** ya lo exige y cada método lo repite con @PreAuthorize).
  */
 @RestController
@@ -52,6 +59,26 @@ public class HistorialCambiosController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "25") int size) {
         return ResponseEntity.ok(auditoriaService.buscar(usuarioId, entidad, accion, texto, desde, hasta, page, size));
+    }
+
+    @PostMapping("/eliminar-seleccion")
+    @PreAuthorize(Permisos.SOLO_ADMIN)
+    @Operation(summary = "Eliminar registros elegidos del historial",
+            description = "Borra los registros con esos IDs (hasta 1000 por vez). La eliminación queda anotada en el historial.")
+    public ResponseEntity<ResultadoEliminacionDTO> eliminarSeleccion(@Valid @RequestBody EliminarHistorialSeleccionDTO dto,
+                                                                     HttpServletRequest request) {
+        return ResponseEntity.ok(new ResultadoEliminacionDTO(auditoriaService.eliminarSeleccion(dto.getIds(), request)));
+    }
+
+    @PostMapping("/eliminar-filtrados")
+    @PreAuthorize(Permisos.SOLO_ADMIN)
+    @Operation(summary = "Eliminar del historial todo lo que coincida con los filtros",
+            description = "Usa los mismos filtros de la consulta (usuario, entidad, acción, texto, fechas). Sin ningún filtro borra todo el "
+                    + "historial y exige confirmarTodo=true. La eliminación queda anotada en el historial.")
+    public ResponseEntity<ResultadoEliminacionDTO> eliminarFiltrados(@RequestBody EliminarHistorialFiltroDTO dto,
+                                                                     HttpServletRequest request) {
+        return ResponseEntity.ok(new ResultadoEliminacionDTO(auditoriaService.eliminarFiltrados(dto.getUsuarioId(), dto.getEntidad(),
+                dto.getAccion(), dto.getTexto(), dto.getDesde(), dto.getHasta(), dto.isConfirmarTodo(), request)));
     }
 
     @GetMapping("/filtros")

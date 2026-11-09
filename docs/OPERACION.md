@@ -21,7 +21,7 @@ Está pensada para quien administra el sitio, no solo para quien programa. Aquí
 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `DB_SSL_MODE`, `JWT_SECRET`, `JWT_EXPIRATION` (3600000 = 1 hora),
 `CORS_ALLOWED_ORIGINS`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`,
 `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`,
-`FLYWAY_ENABLED` (false en Render), `TURNSTILE_SECRET` (clave secreta del captcha; vacía = captcha desactivado, ver 7.4), `APP_SITIO_URL` (enlace del correo de recuperación de contraseña y de la política de datos; si falta, usa el primer origen de `CORS_ALLOWED_ORIGINS`; cámbiala cuando haya dominio).
+`FLYWAY_ENABLED` (false en Render), `TURNSTILE_SECRET` (clave secreta del captcha; vacía = captcha desactivado, ver 7.4), `APP_SITIO_URL` (enlace del correo de recuperación de contraseña y de la política de datos; si falta, usa el primer origen de `CORS_ALLOWED_ORIGINS`; cámbiala cuando haya dominio), `GOOGLE_WALLET_CREDENCIALES` (llave de la tarjeta de Google Wallet en base64, ver 7.13; sin ella la tarjeta queda apagada).
 **No** definir `APP_DOCS_PUBLICAS` (Swagger debe quedar cerrado). `METRICAS_TOKEN` solo si hay un Prometheus que lo use.
 Cuidado al pegar valores: sin espacios sobrantes y **sin los signos `< >` de las plantillas** (una vez `CLOUDINARY_CLOUD_NAME` quedó como `<dn3s7utod>` y las subidas fallaron con 401).
 
@@ -266,6 +266,11 @@ El rol de cada persona se elige al crear o editar un usuario (Admin → Usuarios
 
 `GET /api/admin/auditoria` (solo ADMINISTRADOR), paginado y filtrable por `usuarioId`, `entidad`, `accion`, `texto`, `desde` y `hasta` (fechas `YYYY-MM-DD`, ambas incluidas); `size` máximo 100; `GET /api/admin/auditoria/filtros` trae las entidades y acciones existentes para llenar los filtros.
 
+**Limpieza manual** (solo ADMINISTRADOR; en el panel: casillas por fila, "Eliminar seleccionados" y "Eliminar los N filtrados"):
+- `POST /api/admin/auditoria/eliminar-seleccion` con `{ "ids": [...] }` (hasta 1000 por vez) borra esos registros.
+- `POST /api/admin/auditoria/eliminar-filtrados` con los mismos filtros de la consulta (`usuarioId`, `entidad`, `accion`, `texto`, `desde`, `hasta`) borra todo lo que coincida, en todas las páginas. **Sin ningún filtro borra todo el historial** y solo lo hace con `"confirmarTodo": true` (el panel pide dos confirmaciones).
+- Ambos responden `{ "eliminados": n }` y, si se borró algo, dejan un registro `ELIMINAR_HISTORIAL` ("Eliminó N registros del historial de cambios (...)") con quién lo hizo, su IP y la fecha: limpiar no borra el rastro de la limpieza. Además de esto, la retención automática sigue borrando lo de más de `APP_RETENCION_AUDITORIA_MESES` meses.
+
 - Toda escritura de contenido, usuarios, solicitudes y lotes queda registrada (acción, entidad, ID, descripción, quién, IP, navegador y fecha). La descripción es una frase: `Editó proyecto 'El Encanto' (cambió: descripcion, publicado: no → sí)`, `Eliminó lote 'LT-101'`, `Editó usuario 'Ana' (cambió: activo: sí → no, rol: EDITOR → COMERCIAL)`, `Atendió la solicitud de contacto #12 (cambió: estado: NUEVO → CONTACTADO, observacionesInternas)`.
 - De los campos que cambiaron se guarda **el nombre**; el valor solo si es sí/no, un estado de lista o una relación (estado, rol...). **Nunca** contraseñas, hashes, tokens ni el texto de descripciones o mensajes. Las solicitudes se identifican por su número, no por el nombre de la persona.
 - Retención: `APP_RETENCION_AUDITORIA_MESES` (24; `0` = no borrar nunca). El historial lleva la IP y el navegador de quien administra.
@@ -316,6 +321,33 @@ Para que el sitio lo cite tal cual (versión en español y en inglés). Si cambi
 > **Your IP address** is used only, and only in memory, to limit the number of requests per minute and protect the site from abuse; it is not stored with these statistics.
 
 El marcador de dato omitido es `[dato omitido]` en ambos idiomas (así queda en la base).
+
+### 7.13 Tarjeta de Google Wallet (Android)
+
+El sitio ofrece, en el pie de la página de inicio, "Llévanos en tu celular": la persona escribe su correo y recibe un enlace para guardar en Google Wallet la tarjeta **Grupo Arquinova**, que lleva el **QR de la dirección del sitio** (`APP_SITIO_URL`). Es la misma tarjeta para todos: no lleva nombre, lote ni datos personales. Solo funciona en Android; Apple Wallet no está implementado.
+
+**La llave privada nunca va en el repositorio ni en el .jar.** El archivo JSON de la cuenta de servicio de Google Cloud se entrega por variable de entorno:
+
+| Dónde | Variable | Valor |
+|---|---|---|
+| Render | `GOOGLE_WALLET_CREDENCIALES` | el JSON de la cuenta de servicio **en base64** (o el JSON tal cual) |
+| Tu equipo | `GOOGLE_WALLET_CREDENCIALES_ARCHIVO` | ruta del JSON (`credenciales/google-wallet.json`, carpeta ignorada por Git y por Docker) |
+| Opcionales | `GOOGLE_WALLET_ISSUER_ID`, `GOOGLE_WALLET_CLASS_ID`, `GOOGLE_WALLET_LOGO_URL`, `GOOGLE_WALLET_COLOR`, `GOOGLE_WALLET_MAX_POR_HORA` (30), `GOOGLE_WALLET_MAX_POR_DIA` (200) | |
+
+Para obtener el valor de Render (queda en el portapapeles; pégalo directo en Render, no lo guardes en otro archivo):
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("RUTA\google-wallet.json")) | Set-Clipboard
+```
+
+- Sin credenciales (o si están dañadas) la función queda **apagada**: `POST /api/wallet/enviar-pase` responde 503 y el sitio muestra "no está disponible por ahora". No hay errores internos ni se dice "enviado" sin enviar.
+- **Límites**: 5 solicitudes por minuto y por IP; un correo por hora y por dirección; tope global de 30 por hora y 200 por día (independiente del de las confirmaciones del formulario de contacto). El correo se valida en el servidor.
+- El enlace de Google no puede pasar de 1800 caracteres; una prueba lo vigila (hoy mide ~1580 con la llave real). Si se alarga el logo o el texto, el servidor lo detecta y responde 503 en vez de entregar un enlace que Google rechazaría.
+- Cada correo recibe un identificador de tarjeta estable (un hash, nunca el correo), así que pedirla dos veces no duplica la tarjeta.
+
+**En la consola de Google (lo hace una persona, no el código)**: Google Wallet Business Console → la cuenta del emisor debe estar en modo **producción**. En modo demo solo pueden guardar la tarjeta los correos que se agreguen como "usuarios de prueba"; para el público hay que enviar la solicitud de acceso a producción (Google la revisa). La cuenta de servicio debe estar agregada como usuario del emisor con rol de desarrollador.
+
+**Si la llave se filtró** (se compartió por chat, correo o se subió a un repositorio): Google Cloud → IAM → Cuentas de servicio → Claves → crear una nueva, eliminar la anterior y actualizar `GOOGLE_WALLET_CREDENCIALES`.
 
 ## 8. Antes de publicar el sitio de verdad
 
