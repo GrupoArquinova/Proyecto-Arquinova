@@ -102,6 +102,10 @@ class BrochureYSitemapControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", org.hamcrest.Matchers.startsWith("application/xml")))
                 .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("max-age=3600")))
+                // El CDN de Vercel lo guarda y lo entrega aunque Render esté dormido o caído
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("s-maxage=3600")))
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("stale-while-revalidate=86400")))
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("stale-if-error=604800")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("<loc>https://www.arquinova.test/</loc>")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("<loc>https://www.arquinova.test/proyectos</loc>")))

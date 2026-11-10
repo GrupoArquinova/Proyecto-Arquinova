@@ -37,7 +37,9 @@ public class SitemapController {
         return sitemapService.generar()
                 .map(xml -> ResponseEntity.ok()
                         .contentType(new MediaType("application", "xml", java.nio.charset.StandardCharsets.UTF_8))
-                        .cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePublic())
+                        // s-maxage y stale-*: el CDN de Vercel lo guarda y lo sigue entregando aunque el backend esté dormido
+                        .cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePublic().sMaxAge(Duration.ofHours(1))
+                                .staleWhileRevalidate(Duration.ofDays(1)).staleIfError(Duration.ofDays(7)))
                         .body(xml))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

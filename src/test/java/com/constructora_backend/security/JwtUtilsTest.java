@@ -51,11 +51,11 @@ class JwtUtilsTest {
     @Test
     @DisplayName("El token lleva el nombre de la persona (para mostrarlo en el panel) y no lo lleva si el usuario no lo trae")
     void tokenLlevaElNombreDeLaPersona() {
-        UsuarioPrincipal conNombre = new UsuarioPrincipal("juan@arquinova.com", "x", true, Collections.emptyList(), null, "  Juan Gabriel Londoño  ");
+        UsuarioPrincipal conNombre = new UsuarioPrincipal("ana@arquinova.com", "x", true, Collections.emptyList(), null, "  Ana María Gómez  ");
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(conNombre);
-        assertEquals("Juan Gabriel Londoño", cargaDelToken(jwtUtils.generarToken(auth)).get("nombre"));
-        assertEquals("Juan Gabriel Londoño", cargaDelToken(jwtUtils.generarTokenRenovado(conNombre, System.currentTimeMillis())).get("nombre"));
+        assertEquals("Ana María Gómez", cargaDelToken(jwtUtils.generarToken(auth)).get("nombre"));
+        assertEquals("Ana María Gómez", cargaDelToken(jwtUtils.generarTokenRenovado(conNombre, System.currentTimeMillis())).get("nombre"));
 
         UserDetails generico = new User("otro@arquinova.com", "x", Collections.emptyList());
         when(auth.getPrincipal()).thenReturn(generico);

@@ -12,7 +12,7 @@
   .\scripts\respaldar-aiven.ps1 -Base defaultdb -Carpeta D:\respaldos
 #>
 param(
-    [string]$Servidor = "mysql-a2a837-juangabriellondonoarias-b256.k.aivencloud.com",
+    [string]$Servidor = $env:AIVEN_HOST,
     [int]$Puerto = 19261,
     [string]$Usuario = "avnadmin",
     [string]$Base = "defaultdb",
@@ -20,6 +20,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+if (-not $Servidor) {
+    throw "Falta el servidor de Aiven: define la variable de entorno AIVEN_HOST o pasa -Servidor (esta en la consola de Aiven, pestana Overview)."
+}
 
 # 1) Buscar mysqldump
 $mysqldump = (Get-Command mysqldump -ErrorAction SilentlyContinue).Source

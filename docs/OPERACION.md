@@ -359,6 +359,18 @@ Para obtener el valor de Render (queda en el portapapeles; pégalo directo en Re
 
 **CSP.** El frontend la define en `vercel.json` (scripts solo del propio sitio y del captcha de Cloudflare; sin `unsafe-inline` ni `unsafe-eval` en scripts; `object-src 'none'`, `frame-ancestors 'none'`, listas cerradas para conexiones, imágenes y marcos). La API responde `default-src 'none'; frame-ancestors 'none'; base-uri 'none'`. Al agregar un servicio externo (mapas, videos, analítica) hay que añadir su dominio a la directiva que corresponda en `vercel.json`.
 
+### 7.15 Vista previa al compartir y sitemap
+
+**Vista previa (WhatsApp, Facebook, LinkedIn, X, Telegram).** Esos rastreadores no ejecutan JavaScript: del sitio solo ven el HTML inicial. Por eso:
+- `index.html` trae las etiquetas Open Graph y de X por defecto (título, descripción e imagen 1200×630 del logo, generada por Cloudinary).
+- Para `/proyectos/{id}` (y sus secciones) Vercel reescribe hacia `GET /api/publico/compartir/proyectos/{id}` **solo cuando el navegador que pide es uno de esos rastreadores** (regla con `has: user-agent` en `vercel.json`). El backend responde un HTML mínimo con el nombre, la descripción y la portada del proyecto recortada a 1200×630 (`CompartirService`). Las personas siempre reciben la aplicación. Un proyecto sin publicar o inexistente da 404.
+- Para ver el resultado: `curl -A "WhatsApp/2.23" https://<sitio>/proyectos/6` debe mostrar las etiquetas del proyecto; sin `-A` se ve el `index.html` normal. Si la imagen o el título no cambian al compartir, Facebook y WhatsApp guardan la vista previa: se refresca con el Depurador de Facebook (Sharing Debugger).
+- Con Render gratis dormido, el primer rastreo puede agotar el tiempo; el CDN de Vercel guarda la respuesta 1 hora (`s-maxage`), así que con el plan de pago o con la vista previa ya guardada no hay problema.
+
+**Sitemap.** `/sitemap.xml` es una reescritura de Vercel hacia `GET /api/publico/sitemap.xml`. La respuesta lleva `s-maxage=3600, stale-while-revalidate=86400, stale-if-error=604800`: el CDN la entrega aunque el backend esté dormido o caído. Requiere `APP_SITIO_URL` en Render (sin ella responde 404 a propósito).
+
+**Imágenes.** El sitio público pide a Cloudinary las fotos con `f_auto,q_auto,c_limit,w_<ancho>` (`core/utils/imagenes.ts` y el pipe `imagenOptimizada`): formato AVIF/WebP según el navegador, calidad automática y ancho máximo. Los recorridos 360 y el panel de administración usan la imagen original. Cloudinary las genera en la primera petición y las guarda en su CDN.
+
 ## 8. Antes de publicar el sitio de verdad
 
 - [ ] Dominio propio con HTTPS, y actualizar todo lo de la fila "Cambia el dominio".

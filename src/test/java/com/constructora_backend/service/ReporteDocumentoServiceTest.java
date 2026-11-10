@@ -257,14 +257,14 @@ class ReporteDocumentoServiceTest {
     @DisplayName("PDF de actividad: la descripción, el correo y la acción salen completos")
     void pdfDeActividadNoRecortaNada() throws IOException {
         String descripcion = "Editó proyecto 'El Encanto' (cambió: descripcion, publicado: no → sí, imagenUrl, estadoProyecto: EN_GESTION → EN_CONSTRUCCION)";
-        ReporteActividadItemDTO a = new ReporteActividadItemDTO(1L, "Juan Gabriel Londoño Arias", "juangabriellondonoarias@gmail.com",
+        ReporteActividadItemDTO a = new ReporteActividadItemDTO(1L, "Ana María Gómez Pérez", "ana.gomez@ejemplo.com",
                 "CONSULTAR_REPORTE_ACTIVIDAD_ADMINISTRATIVA", "REPORTES", 7L, descripcion, "0:0:0:0:0:0:0:1", LocalDateTime.of(2026, 11, 9, 9, 45));
         lenient().when(reporteService.consultarReporteActividad(any())).thenReturn(List.of(a));
 
         String texto = compacto(textoDe(servicio.generarActividadPdf(new FiltroReporteDTO())));
 
         assertTrue(texto.contains(compacto(descripcion.replace("→", "->"))), "la descripción completa aparece (la flecha se imprime como ->)");
-        assertTrue(texto.contains("juangabriellondonoarias@gmail.com"));
+        assertTrue(texto.contains("ana.gomez@ejemplo.com"));
         assertTrue(texto.contains("CONSULTAR_REPORTE_ACTIVIDAD_ADMINISTRATIVA"));
         assertFalse(texto.contains("..."));
     }
