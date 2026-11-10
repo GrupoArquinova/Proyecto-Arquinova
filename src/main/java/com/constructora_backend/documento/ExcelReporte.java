@@ -1,5 +1,6 @@
 package com.constructora_backend.documento;
 
+import com.constructora_backend.util.SanitizadorTexto;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -125,7 +126,12 @@ public final class ExcelReporte {
                 else celda.setCellValue(limitar(valor.toString()));
             }
             case SI_NO -> celda.setCellValue(Boolean.TRUE.equals(valor) ? "Sí" : "No");
-            case TEXTO -> celda.setCellValue(limitar(valor.toString()));
+            case TEXTO -> {
+                String texto = limitar(valor.toString());
+                celda.setCellValue(texto);
+                // Un texto que empieza con = + - @ podría leerse como fórmula al editar la celda o al pasarla a CSV: se fuerza a texto
+                if (SanitizadorTexto.pareceFormula(texto)) celda.setCellStyle(estilos.textoForzado());
+            }
         }
     }
 
@@ -204,6 +210,7 @@ public final class ExcelReporte {
         private final DataFormat formato;
         private final Map<Columna.Tipo, CellStyle> datos = new EnumMap<>(Columna.Tipo.class);
         private final Map<Columna.Tipo, CellStyle> totales = new EnumMap<>(Columna.Tipo.class);
+        private XSSFCellStyle textoForzado;
 
         Estilos(XSSFWorkbook libro) {
             this.libro = libro;
@@ -242,6 +249,17 @@ public final class ExcelReporte {
 
         CellStyle dato(Columna.Tipo tipo) {
             return datos.computeIfAbsent(tipo, t -> construir(t, false));
+        }
+
+        /** El estilo del texto con "prefijo de comilla": Excel lo trata siempre como texto, nunca como fórmula. */
+        CellStyle textoForzado() {
+            if (textoForzado == null) {
+                XSSFCellStyle e = libro.createCellStyle();
+                e.cloneStyleFrom(dato(Columna.Tipo.TEXTO));
+                e.setQuotePrefixed(true);
+                textoForzado = e;
+            }
+            return textoForzado;
         }
 
         CellStyle total(Columna.Tipo tipo) {

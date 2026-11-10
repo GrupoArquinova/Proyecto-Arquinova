@@ -349,6 +349,16 @@ Para obtener el valor de Render (queda en el portapapeles; pégalo directo en Re
 
 **Si la llave se filtró** (se compartió por chat, correo o se subió a un repositorio): Google Cloud → IAM → Cuentas de servicio → Claves → crear una nueva, eliminar la anterior y actualizar `GOOGLE_WALLET_CREDENCIALES`.
 
+### 7.14 Sanitización de entradas y política de contenido (CSP)
+
+**Entradas.** Todo texto que llega en el cuerpo JSON de una petición se limpia ANTES de llegar a un controlador, a un servicio o a la base de datos (`config/SanitizacionJacksonConfig` + `util/SanitizadorTexto`): se quitan las etiquetas HTML (y el contenido de los bloques `<script>`, `<style>`, `<iframe>`…), los caracteres de control y los que invierten el sentido del texto, y se unifican los acentos (NFC). Se conservan los saltos de línea y tabulaciones de los mensajes, y textos normales como `<3`, `a < b`, emojis, URL o teléfonos con `+`.
+- **No se tocan** los campos cuyo nombre contiene `pass`, `contras`, `token`, `clave`, `secret` o `authorization`: cambiar una contraseña (que admite `<` y `>`) o un token rompería el inicio de sesión o el enlace.
+- Un campo que solo era marcado queda vacío y la validación de obligatorio lo rechaza; un salto de línea en un campo de una sola línea sigue dando 400.
+- Es una defensa en profundidad: el sitio además escapa al mostrar (Angular) y los correos se escapan antes de enviarse. **Solo limpia lo nuevo**: los registros que ya estaban en la base no se modifican.
+- Los reportes Excel marcan como texto forzado (prefijo de comilla de Excel) las celdas que empiezan con `=`, `+`, `-` o `@`, para que no puedan leerse como fórmula al editarlas o pasarlas a CSV.
+
+**CSP.** El frontend la define en `vercel.json` (scripts solo del propio sitio y del captcha de Cloudflare; sin `unsafe-inline` ni `unsafe-eval` en scripts; `object-src 'none'`, `frame-ancestors 'none'`, listas cerradas para conexiones, imágenes y marcos). La API responde `default-src 'none'; frame-ancestors 'none'; base-uri 'none'`. Al agregar un servicio externo (mapas, videos, analítica) hay que añadir su dominio a la directiva que corresponda en `vercel.json`.
+
 ## 8. Antes de publicar el sitio de verdad
 
 - [ ] Dominio propio con HTTPS, y actualizar todo lo de la fila "Cambia el dominio".
