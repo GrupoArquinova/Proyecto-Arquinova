@@ -1,0 +1,102 @@
+package com.constructora_backend.entity;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "solicitudes_contacto", indexes = {
+        @Index(name = "idx_solicitudes_estado_fecha", columnList = "estado_id, creado_en"),
+        @Index(name = "idx_solicitudes_proyecto", columnList = "proyecto_id"),
+        @Index(name = "idx_solicitudes_lote", columnList = "lote_id"),
+        @Index(name = "idx_solicitudes_fecha", columnList = "creado_en")
+})
+@Data
+public class SolicitudContacto {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "estado_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private EstadoSolicitud estado;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "proyecto_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Proyecto proyecto;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lote_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Lote lote;
+
+    /** Tipología (villa) por la que se pregunta, si la persona llegó desde una. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "casa_modelo_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private CasaModelo casaModelo;
+
+    @Column(nullable = false, length = 150)
+    private String nombre;
+
+    /** Al menos uno de los dos medios de contacto (correo o teléfono) debe venir informado. */
+    @Column(length = 254)
+    private String correo;
+
+    @Column(length = 30)
+    private String telefono;
+
+    @Column(name = "servicio_interes", length = 120)
+    private String servicioInteres;
+
+    /** Idioma del sitio cuando la persona escribió: "es" o "en". */
+    @Column(nullable = false, length = 5)
+    private String idioma = "es";
+
+    @Column(columnDefinition = "TEXT")
+    private String mensaje;
+
+    @Column(name = "consentimiento_datos", nullable = false)
+    private Boolean cosentimientoDatos = false;
+
+    /** Versión de la política de tratamiento de datos que la persona aceptó al enviar el formulario. */
+    @Column(name = "version_politica", length = 20)
+    private String versionPolitica;
+
+    @Column(name = "fecha_consentimiento")
+    private LocalDateTime fechaConsentimiento;
+
+    @Column(length = 45)
+    private String ip;
+
+    @Column(name = "user_agent", length = 500)
+    private String userAgent;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "atendida_por")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Usuario atendidaPor;
+
+    @Column(name = "atendida_en")
+    private LocalDateTime atendidaEn;
+
+    @Column(name = "observaciones_internas", columnDefinition = "TEXT")
+    private String observacionesInternas;
+
+    @Column(name = "creado_en", nullable = false, insertable = false, updatable = false)
+    private LocalDateTime creadoEn;
+
+    @Column(name = "actualizado_en", insertable = false, updatable = false)
+    private LocalDateTime actualizadoEn;
+}

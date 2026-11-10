@@ -31,3 +31,35 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Environment Variables ###
+.env
+
+# Antigravity / Logs y Temporales
+*.log
+*.sql
+# ...excepto las migraciones de Flyway, que sí deben versionarse
+!src/main/resources/db/migration/*.sql
+# ...y los datos iniciales de una base local nueva (solo clave de prueba, sin datos personales)
+!docs/datos-iniciales-local.sql
+*.dump
+.agent/scratch/
+
+### K6 Load Test Results (generados localmente, no subir al repositorio) ###
+tests/load/resultados/
+
+### Secretos de Kubernetes (usar k8s/secret.example.yaml como plantilla) ###
+k8s/secret.yaml
+
+# Token de métricas de Prometheus (secreto)
+prometheus/metricas_token
+
+# Respaldos de la base de datos (contienen datos personales)
+respaldos/
+*.sql.gz
+*.sql.gz.enc
+
+# Llaves y credenciales (Google Wallet, etc.): nunca al repositorio
+/credenciales/
+**/*wallet*.json
+!**/src/test/**/*wallet*.json

@@ -1,14 +1,258 @@
 spring:
   application:
     name: constructora-backend
+
+  # Ningún endpoint recibe archivos (van a Cloudinary). Límite bajo por seguridad.
+  servlet:
+    multipart:
+      max-file-size: 1MB
+      max-request-size: 1MB
+
   datasource:
-    url: jdbc:mysql://localhost:3306/constructora_web
-    username: root
-    password: JUAN1003
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:constructora_web}?sslMode=${DB_SSL_MODE:DISABLED}&allowPublicKeyRetrieval=true&serverTimezone=America/Bogota
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
+
+  # ─── Migraciones de Base de Datos Versionadas (Flyway) ───────────────────────
+  # Desactivado por defecto en local (FLYWAY_ENABLED=true en Kubernetes / bases nuevas).
+  # En una base existente sin historial de Flyway, se toma como línea base la V1
+  # (no la vuelve a ejecutar) y solo se aplican las migraciones posteriores.
+  flyway:
+    enabled: ${FLYWAY_ENABLED:false}
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:db/migration
+
+
+  # ─── Caché y Datos Distribuidos (Redis) ──────────────────────────────────────
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 3000ms
+
+  # ─── Cola de Mensajes Asíncrona (RabbitMQ) ──────────────────────────────────
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        auto-startup: ${RABBITMQ_AUTO_STARTUP:false}
+        retry:
+          enabled: true
+          initial-interval: 3000ms
+          max-attempts: 3
+          multiplier: 2.0
+
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl:
+            trust: ${MAIL_HOST:smtp.gmail.com}
+          from: ${MAIL_FROM}
+
+server:
+  port: ${SERVER_PORT:8080}
+  # Detrás de un proxy (Render, Kubernetes) la API ve HTTP; así toma el protocolo real de X-Forwarded-Proto y envía HSTS
+  forward-headers-strategy: framework
+  # Compresión de respuestas HTTP para mejor rendimiento
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/plain
+    min-response-size: 2048
+
+  # Las imágenes y archivos se suben directo del navegador a Cloudinary (subida firmada),
+  # así que la API solo recibe JSON pequeño con URLs. Límite para formularios:
+  tomcat:
+    max-http-form-post-size: 1MB
+    # Lo que Tomcat lee y descarta de una petición rechazada, antes de cortar la conexión
+    max-swallow-size: 64KB
+  # Encabezados HTTP: 16 KB de sobra para un JWT y las cabeceras normales
+  max-http-request-header-size: 16KB
+
+jwt:
+  # Sin valor por defecto a propósito: la aplicación no arranca sin JWT_SECRET (mínimo 32 caracteres aleatorios)
+  secret: ${JWT_SECRET}
+  # Sesión corta (1 hora); el panel la renueva solo mientras la persona trabaja (POST /api/auth/renovar)
+  expiration: ${JWT_EXPIRATION:3600000}
+  # Vida máxima absoluta de una sesión por más que se renueve: pasado ese tiempo hay que iniciar sesión de nuevo
+  sesion-maxima-horas: ${JWT_SESION_MAXIMA_HORAS:12}
+
+# ─── Documentación de la API (Swagger): cerrada por defecto; en desarrollo APP_DOCS_PUBLICAS=true ───
+springdoc:
+  api-docs:
+    enabled: ${APP_DOCS_PUBLICAS:false}
+  swagger-ui:
+    enabled: ${APP_DOCS_PUBLICAS:false}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+
+# ─── Cloudinary (subidas firmadas desde el panel de administración) ──────────
+# El API secret solo vive en el servidor; el frontend pide una firma a /api/cloudinary/firma.
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
+  folder: ${CLOUDINARY_FOLDER:arquinova}
+
+# ─── Spring Boot Actuator (Observabilidad y Health Checks) ────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  # La salud que ve el monitoreo depende solo de lo imprescindible (la base de datos; Redis tiene respaldo en memoria).
+  # El correo no es crítico (el envío es asíncrono y tiene circuit breaker) y RabbitMQ solo existe en compose/Kubernetes.
+  health:
+    mail:
+      enabled: false
+    rabbit:
+      enabled: ${HEALTH_RABBIT:false}
+  endpoint:
+    health:
+      # El detalle de la salud (base de datos, espacio en disco...) solo lo ve un ADMINISTRADOR; las sondas siguen siendo públicas
+      show-details: when_authorized
+      roles: ADMINISTRADOR
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: db
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+  info:
+    env:
+      enabled: true
+
+# ─── Información del servicio (expuesta en /actuator/info) ────────────────────
+info:
+  app:
+    name: Constructora Backend - Grupo Arquinova
+    version: 1.0.0
+    description: API REST para la gestión de proyectos, lotes y usuarios del Grupo Arquinova
+    java-version: 21
+    framework: Spring Boot 3.5.16
+
+# ─── Logging estructurado ──────────────────────────────────────────────────────
+logging:
+  level:
+    root: INFO
+    com.constructora_backend: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
+
+# ─── Resiliencia y Circuit Breaker (Resilience4j) ─────────────────────────────
+resilience4j:
+  circuitbreaker:
+    instances:
+      emailService:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 5
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10000ms
+        permitted-number-of-calls-in-half-open-state: 2
+        automatic-transition-from-open-to-half-open-enabled: true
+
+# ─── Contacto web ────────────────────────────────────────────────────────────
+app:
+  seguridad:
+    # Swagger / OpenAPI: cerrado por defecto. En desarrollo: APP_DOCS_PUBLICAS=true
+    docs-publicas: ${APP_DOCS_PUBLICAS:false}
+    # Token con el que Prometheus lee /actuator/prometheus. Vacío = métricas cerradas para todos
+    metricas-token: ${METRICAS_TOKEN:}
+    # Tope del cuerpo de cualquier petición a /api/** (bytes); más que eso responde 413
+    max-cuerpo-bytes: ${APP_MAX_CUERPO_BYTES:65536}
+  # Dirección pública del sitio (por ejemplo https://www.midominio.com). Si se deja vacía, los correos no llevan enlaces al sitio.
+  sitio-url: ${APP_SITIO_URL:}
+  contacto:
+    # Correo de la empresa que recibe el aviso de cada solicitud nueva. Sin valor por defecto: si falta, no se envía el aviso
+    correo-aviso: ${APP_CONTACTO_CORREO_AVISO:}
+    # Confirmación automática al cliente que deja su correo (false para apagarla)
+    confirmacion-activa: ${APP_CONTACTO_CONFIRMACION_ACTIVA:true}
+    # Tope global de confirmaciones del sitio por hora y por día (además de 1 por hora y por dirección)
+    confirmaciones-max-hora: ${APP_CONTACTO_CONFIRMACIONES_MAX_HORA:60}
+    confirmaciones-max-dia: ${APP_CONTACTO_CONFIRMACIONES_MAX_DIA:300}
+    whatsapp: ${APP_CONTACTO_WHATSAPP:+57 316 865 3715}
+  # Captcha del formulario público (Cloudflare Turnstile). Sin TURNSTILE_SECRET queda DESACTIVADO (todo token pasa).
+  captcha:
+    turnstile-secret: ${TURNSTILE_SECRET:}
+    # Si Cloudflare no responde: false = rechaza con 503 "intenta de nuevo"; true = deja pasar (prefiere disponibilidad)
+    fallo-abierto: ${TURNSTILE_FALLO_ABIERTO:false}
+    timeout-segundos: 5
+  # Versión de la política de tratamiento de datos que se guarda con cada consentimiento
+  legal:
+    version-politica: ${APP_LEGAL_VERSION_POLITICA:2026-10}
+  # Retención de datos personales (Ley 1581): meses que se conservan las solicitudes de contacto; 0 = no borrar nunca
+  retencion:
+    solicitudes-meses: ${APP_RETENCION_SOLICITUDES_MESES:24}
+    # Analítica sin cookies, preguntas guardadas del asistente e historial de cambios del panel (0 = no borrar nunca)
+    analitica-meses: ${APP_RETENCION_ANALITICA_MESES:24}
+    chat-meses: ${APP_RETENCION_CHAT_MESES:12}
+    auditoria-meses: ${APP_RETENCION_AUDITORIA_MESES:24}
+    cron: ${APP_RETENCION_CRON:0 0 3 * * *}
+
+# Asistente de IA (Gemini). La clave NUNCA va en este archivo: se define en la variable de entorno GEMINI_API_KEY
+# (en .env para trabajar en local y en el panel de Render en la demo). Sin clave, el chat responde que no está disponible.
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+    modelo: ${GEMINI_MODEL:gemini-3.1-flash-lite}
+    # Si el modelo principal falla (retirado o con alta demanda), se prueba este
+    modelo-respaldo: ${GEMINI_MODEL_RESPALDO:gemini-3.6-flash}
+    base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta/models}
+  # Tiempos máximos (segundos) y largo máximo de la pregunta (caracteres)
+  # Consultas simultáneas máximas a la IA (si no hay cupo, 429 de inmediato) y cuota diaria global de preguntas (0 = sin tope)
+  concurrencia-maxima: ${GEMINI_CONCURRENCIA_MAXIMA:5}
+  cuota-diaria: ${GEMINI_CUOTA_DIARIA:1000}
+  conexion-segundos: 5
+  respuesta-segundos: ${GEMINI_RESPUESTA_SEGUNDOS:10}
+  pregunta-max: 500
+
+# ─── Google Wallet: tarjeta digital de la empresa con el QR del sitio ──────────
+# La llave privada de la cuenta de servicio NUNCA va en el repositorio ni en el .jar. Se entrega con UNA de estas dos variables:
+#   GOOGLE_WALLET_CREDENCIALES          el JSON de la cuenta de servicio, tal cual o en base64 (Render)
+#   GOOGLE_WALLET_CREDENCIALES_ARCHIVO  ruta de un archivo con ese JSON (equipo local)
+# Sin ninguna, la tarjeta queda apagada y el sitio responde 503. El QR lleva APP_SITIO_URL.
+google:
+  wallet:
+    issuer-id: ${GOOGLE_WALLET_ISSUER_ID:3388000000023232718}
+    class-id: ${GOOGLE_WALLET_CLASS_ID:3388000000023232718.arquinova_pass}
+    credenciales: ${GOOGLE_WALLET_CREDENCIALES:}
+    credenciales-archivo: ${GOOGLE_WALLET_CREDENCIALES_ARCHIVO:}
+    logo-url: ${GOOGLE_WALLET_LOGO_URL:https://res.cloudinary.com/dn3s7utod/image/upload/v1790258444/logo-Arquinova_dgkosg.jpg}
+    color: ${GOOGLE_WALLET_COLOR:#2c5953}
+    # Topes globales de correos con la tarjeta (además de 1 por hora y por dirección, y 5 por minuto y por IP)
+    max-por-hora: ${GOOGLE_WALLET_MAX_POR_HORA:30}
+    max-por-dia: ${GOOGLE_WALLET_MAX_POR_DIA:200}

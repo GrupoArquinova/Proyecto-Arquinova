@@ -1,0 +1,69 @@
+name: Monitoreo del sitio y de la API
+
+# Cada 15 minutos revisa que el sitio y la API respondan y que las cabeceras de seguridad sigan puestas.
+# Si algo falla, el workflow queda en rojo y GitHub envía un correo a quien editó por última vez el cron.
+# Efecto secundario útil: la API gratuita de Render se duerme tras 15 minutos sin tráfico; esta revisión la mantiene despierta.
+#
+# Si cambia el dominio, define las variables URL_BACKEND y URL_FRONTEND en Settings > Secrets and variables > Actions > Variables.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monitoreo
+  cancel-in-progress: true
+
+env:
+  URL_BACKEND: ${{ vars.URL_BACKEND || 'https://arquinova-backend.onrender.com' }}
+  URL_FRONTEND: ${{ vars.URL_FRONTEND || 'https://arquinova.vercel.app' }}
+
+jobs:
+  revisar:
+    name: Revisar sitio, API y cabeceras
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Revisiones
+        shell: bash
+        run: |
+          fallos=0
+
+          # revisar "nombre" "url" "estado esperado (expresión regular)" "texto que debe contener (opcional)"
+          # Reintenta hasta 6 veces con pausas de 25 s: la API de Render puede tardar ~50 s en despertar.
+          revisar() {
+            local nombre="$1" url="$2" estado="$3" texto="${4:-}"
+            for intento in 1 2 3 4 5 6; do
+              codigo=$(curl -s -o cuerpo.txt -w '%{http_code}' --max-time 60 "$url" || true)   # sin respuesta: curl deja 000
+              if [[ "$codigo" =~ ^($estado)$ ]] && { [ -z "$texto" ] || grep -qF -- "$texto" cuerpo.txt; }; then
+                echo "OK    $nombre ($codigo, intento $intento)"; return 0
+              fi
+              sleep 25
+            done
+            echo "::error title=$nombre::$url respondió $codigo (se esperaba $estado${texto:+ y que contuviera '$texto'})"
+            fallos=$((fallos + 1))
+          }
+
+          cabecera() {
+            local nombre="$1" url="$2" cabecera="$3"
+            if curl -sI --max-time 60 "$url" | grep -qi "^$cabecera:"; then echo "OK    $nombre (tiene $cabecera)"
+            else echo "::error title=$nombre::$url ya no envía la cabecera $cabecera"; fallos=$((fallos + 1)); fi
+          }
+
+          revisar "API viva"            "$URL_BACKEND/actuator/health/liveness"          "200" '"UP"'
+          revisar "API lista (base de datos)" "$URL_BACKEND/actuator/health/readiness"    "200" '"UP"'
+          revisar "API entrega proyectos" "$URL_BACKEND/api/proyectos?soloPublicados=true" "200" '['
+          revisar "Sitio carga"         "$URL_FRONTEND/"                                  "200" '<app-root'
+          revisar "Swagger cerrado"     "$URL_BACKEND/swagger-ui/index.html"              "401|403"
+          revisar "Métricas cerradas"   "$URL_BACKEND/actuator/prometheus"                "401|403"
+
+          cabecera "Sitio: política de contenido" "$URL_FRONTEND/"                        "content-security-policy"
+          cabecera "Sitio: HSTS"                  "$URL_FRONTEND/"                        "strict-transport-security"
+          cabecera "API: HSTS"                    "$URL_BACKEND/api/proyectos?soloPublicados=true" "strict-transport-security"
+
+          echo "Fallos: $fallos"
+          [ "$fallos" -eq 0 ]

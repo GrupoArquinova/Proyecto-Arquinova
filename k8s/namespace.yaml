@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: constructora
+  labels:
+    app.kubernetes.io/name: constructora-namespace
+    environment: production

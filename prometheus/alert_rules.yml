@@ -1,0 +1,29 @@
+groups:
+  - name: constructora_alerts
+    rules:
+      - alert: BackendHighErrorRate
+        expr: (sum(rate(http_server_requests_seconds_count{status=~"5.."}[2m])) / sum(rate(http_server_requests_seconds_count[2m]))) * 100 > 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Tasa de errores HTTP 5xx superior al 1%"
+          description: "El backend está experimentando un error rate de {{ $value | printf \"%.2f\" }}% en los últimos 2 minutos."
+
+      - alert: BackendHighLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[2m])) by (le)) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latencia P95 superior a 500ms"
+          description: "La latencia percentil 95 supera los 500ms (actual: {{ $value | printf \"%.3f\" }}s)."
+
+      - alert: BackendHighJvmMemoryUsage
+        expr: (jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"}) * 100 > 80
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Uso de memoria JVM Heap superior al 80%"
+          description: "La memoria Heap de la JVM supera el 80% de capacidad asignada (actual: {{ $value | printf \"%.2f\" }}%)."
